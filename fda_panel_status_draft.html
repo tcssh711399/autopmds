@@ -779,14 +779,14 @@ function copyScript() {
   try { ok = document.execCommand('copy'); } catch(e) {}
   textarea.setAttribute('readonly','readonly');
   if (ok) {
-    status.textContent = '✅ 已複製，請切換到稽查頁面網址列貼上。';
+    status.textContent = '✅ 已複製，請新增書籤後，把網址改成這段腳本。';
     status.style.color = 'var(--green)';
     return;
   }
   // fallback: clipboard API
   if (navigator.clipboard) {
     navigator.clipboard.writeText(text).then(function() {
-      status.textContent = '✅ 已複製，請切換到稽查頁面網址列貼上。';
+      status.textContent = '✅ 已複製，請新增書籤後，把網址改成這段腳本。';
       status.style.color = 'var(--green)';
     }).catch(function() {
       status.textContent = '⚠️ 自動複製失敗，請手動全選後按 Ctrl+C。';
