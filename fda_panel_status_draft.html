@@ -50,18 +50,21 @@
   .items-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
   @media(max-width:900px){ body{padding:14px;} .panel{padding:14px;} .items-grid{grid-template-columns:repeat(2,1fr);} }
   @media(max-width:560px){ body{padding:10px;} h1{font-size:18px;} .panel{padding:12px;border-radius:8px;} .field{min-width:100%;} .items-grid{grid-template-columns:1fr;} .rbtn{flex:1 1 auto;justify-content:center;} }
-  .item-card { border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: var(--white); transition: all 0.15s; cursor: pointer; }
-  .item-card:hover { border-color: var(--green-mid); box-shadow: var(--shadow); }
+  .item-card { border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; background: var(--white); transition: all 0.15s; cursor: pointer; min-height: 86px; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+  .item-card:hover { border-color: var(--green-mid); background: #eef7f2; box-shadow: var(--shadow); }
   .item-card:active { transform: scale(0.99); }
-  .item-name { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
-  .item-status { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; min-height: 16px; display: flex; align-items: center; gap: 4px; }
+  .item-card.active { background: var(--green); border-color: var(--green); color: #fff; box-shadow: var(--shadow); }
+  .item-card.active:hover { background: #256f48; border-color: #256f48; }
+  .item-name { font-size: 16px; font-weight: 700; }
+  .item-status { font-size: 14px; color: var(--text-muted); min-height: 16px; display: flex; align-items: center; gap: 5px; }
+  .item-card.active .item-status { color: #e8f5ee; }
   .btn { display: block; width: 100%; padding: 9px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 15px; font-family: inherit; font-weight: 600; transition: all 0.15s; text-align: center; }
   .btn-script { background: #eef7f2; color: var(--green); border: 1px solid var(--border); }
   .btn-script:hover { background: #e3f1e9; }
   .btn-script:active { transform: scale(0.97); }
   .btn-script.active { background: var(--green); color: #fff; border-color: var(--green); }
-  .item-card .btn-script { pointer-events: none; }
   .sdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .item-card.active .sdot { background:#fff; }
   .d-gray{background:#ccc;} .d-green{background:var(--green);} .d-orange{background:var(--orange);} .d-red{background:var(--red);}
   .hidden { display: none !important; }
   .tip { font-size: 13px; color: var(--text-muted); margin-top: 8px; font-style: italic; }
@@ -195,35 +198,29 @@
   <div class="panel-title">🔍 稽查項目執行</div>
   <div class="inline-notice">⚠️ 點擊下方卡片產出書籤腳本後製作成書籤。</div>
   <div class="items-grid">
-    <div class="item-card" role="button" tabindex="0" onclick="runSource()" onkeydown="cardKeyRun(event, runSource)">
+    <div class="item-card" id="card-source" role="button" tabindex="0" onclick="runSource()" onkeydown="cardKeyRun(event, runSource)">
       <div class="item-name">📄 來源文件保存</div>
       <div class="item-status" id="log-source"><span class="sdot d-gray"></span>待產出</div>
-  <button class="btn btn-script" id="btn-source" type="button" tabindex="-1">產出書籤腳本</button>
     </div>
-    <div class="item-card" role="button" tabindex="0" onclick="runGHP()" onkeydown="cardKeyRun(event, runGHP)">
+    <div class="item-card" id="card-ghp" role="button" tabindex="0" onclick="runGHP()" onkeydown="cardKeyRun(event, runGHP)">
       <div class="item-name">🏭 GHP</div>
       <div class="item-status" id="log-ghp"><span class="sdot d-gray"></span>待產出</div>
-  <button class="btn btn-script" id="btn-ghp" type="button" tabindex="-1">產出書籤腳本</button>
     </div>
-    <div class="item-card" role="button" tabindex="0" onclick="runExpired()" onkeydown="cardKeyRun(event, runExpired)">
+    <div class="item-card" id="card-expired" role="button" tabindex="0" onclick="runExpired()" onkeydown="cardKeyRun(event, runExpired)">
       <div class="item-name">⏰ 逾期食品稽查</div>
       <div class="item-status" id="log-expired"><span class="sdot d-gray"></span>待產出</div>
-  <button class="btn btn-script" id="btn-expired" type="button" tabindex="-1">產出書籤腳本</button>
     </div>
-    <div class="item-card" role="button" tabindex="0" onclick="runReg()" onkeydown="cardKeyRun(event, runReg)">
+    <div class="item-card" id="card-reg" role="button" tabindex="0" onclick="runReg()" onkeydown="cardKeyRun(event, runReg)">
       <div class="item-name">📝 登錄查核</div>
       <div class="item-status" id="log-reg"><span class="sdot d-gray"></span>待產出</div>
-  <button class="btn btn-script" id="btn-reg" type="button" tabindex="-1">產出書籤腳本</button>
     </div>
-    <div class="item-card" role="button" tabindex="0" onclick="runInsurance()" onkeydown="cardKeyRun(event, runInsurance)">
+    <div class="item-card" id="card-insurance" role="button" tabindex="0" onclick="runInsurance()" onkeydown="cardKeyRun(event, runInsurance)">
       <div class="item-name">🛡️ 產品責任保險</div>
       <div class="item-status" id="log-insurance"><span class="sdot d-gray"></span>待產出</div>
-  <button class="btn btn-script" id="btn-insurance" type="button" tabindex="-1">產出書籤腳本</button>
     </div>
-    <div class="item-card" role="button" tabindex="0" onclick="runLabel()" onkeydown="cardKeyRun(event, runLabel)">
+    <div class="item-card" id="card-label" role="button" tabindex="0" onclick="runLabel()" onkeydown="cardKeyRun(event, runLabel)">
       <div class="item-name">🏷️ 標示抽驗</div>
       <div class="item-status" id="log-label"><span class="sdot d-gray"></span>待產出</div>
-  <button class="btn btn-script" id="btn-label" type="button" tabindex="-1">產出書籤腳本</button>
     </div>
   </div>
 </div>
@@ -938,14 +935,12 @@ function keepDialogInView(d) {
 }
 
 function setActiveScriptButton(activeId) {
-  document.querySelectorAll('.btn-script').forEach(function(btn) {
-    btn.classList.remove('active');
-    btn.textContent = '產出書籤腳本';
+  document.querySelectorAll('.item-card').forEach(function(card) {
+    card.classList.remove('active');
   });
-  var current = document.getElementById('btn-' + activeId);
+  var current = document.getElementById('card-' + activeId);
   if (current) {
     current.classList.add('active');
-    current.textContent = '產出書籤腳本';
   }
 }
 
@@ -990,6 +985,8 @@ function resetLogsExcept(activeId) {
   ['source','ghp','expired','reg','insurance','label'].forEach(function(id) {
     if (id === activeId) return;
     setLog(id, '待產出', 'gray');
+    var card = document.getElementById('card-' + id);
+    if (card) card.classList.remove('active');
   });
 }
 
