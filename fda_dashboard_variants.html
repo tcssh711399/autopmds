@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>食品稽查儀表板設計提案</title>
+<style>
+  :root {
+    --green: #2d7a4f;
+    --green-2: #3e9364;
+    --green-soft: #eef8f3;
+    --line: #c8e0d2;
+    --line-strong: #9cc8af;
+    --text: #183325;
+    --muted: #6d8c7a;
+    --bg: #f4faf7;
+    --panel: #ffffff;
+    --warn: #d68622;
+    --danger: #c04438;
+    --blue: #2f6f91;
+    --shadow: 0 8px 24px rgba(45,122,79,.12);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif;
+    font-size: 15px;
+  }
+  button, input, select { font: inherit; }
+  .shell { max-width: 1380px; margin: 0 auto; padding: 18px 22px 34px; }
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 240px;
+  }
+  .brand-mark {
+    width: 6px;
+    height: 32px;
+    background: var(--green);
+  }
+  h1 { margin: 0; font-size: 22px; color: var(--green); letter-spacing: 0; }
+  .variant-switch {
+    display: inline-flex;
+    padding: 4px;
+    gap: 4px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+  }
+  .variant-switch button {
+    border: 0;
+    border-radius: 6px;
+    padding: 8px 14px;
+    color: var(--green);
+    background: transparent;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  .variant-switch button.active { background: var(--green); color: #fff; }
+  .note {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+  .variant { display: none; }
+  .variant.active { display: block; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+  }
+  .section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+    color: var(--green);
+    font-weight: 800;
+    font-size: 16px;
+  }
+  .label { color: var(--muted); font-size: 13px; font-weight: 700; margin-bottom: 5px; }
+  .input, .select {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    padding: 9px 10px;
+    min-height: 40px;
+    color: var(--text);
+  }
+  .btn {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    min-height: 40px;
+    padding: 9px 13px;
+    background: var(--green-soft);
+    color: var(--green);
+    cursor: pointer;
+    font-weight: 800;
+  }
+  .btn.primary { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn.ghost { background: #fff; }
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #c8c8c8; display: inline-block; }
+  .dot.ok { background: var(--green); }
+  .dot.warn { background: var(--warn); }
+  .dot.danger { background: var(--danger); }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 13px;
+    background: #fff;
+    color: var(--muted);
+    font-weight: 800;
+  }
+  .pill.active { background: var(--green); color: #fff; border-color: var(--green); }
+  .script-box {
+    background: #f8fbf9;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .script-code {
+    margin: 10px 0;
+    min-height: 128px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    padding: 10px;
+    overflow: hidden;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+    color: #244233;
+    line-height: 1.45;
+  }
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
+  .kpi {
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+  }
+  .kpi .value { font-size: 24px; font-weight: 900; color: var(--green); margin: 5px 0 2px; }
+  .kpi .hint { color: var(--muted); font-size: 12px; }
+  .grid-a {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 14px;
+  }
+  .left-stack { display: grid; gap: 14px; }
+  .settings-grid { display: grid; grid-template-columns: 1.5fr 1fr auto; gap: 12px; align-items: end; padding: 14px; }
+  .ghp-strip { padding: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .task-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; padding: 14px; }
+  .task-card {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px;
+    min-height: 116px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .task-card.active { border-color: var(--green); background: var(--green-soft); }
+  .task-title { font-weight: 900; font-size: 15px; margin-bottom: 6px; }
+  .task-meta { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+  .right-panel { padding: 14px; position: sticky; top: 14px; align-self: start; }
+  .activity { padding: 14px; }
+  .activity table { width: 100%; border-collapse: collapse; }
+  .activity th, .activity td { text-align: left; border-bottom: 1px solid #e5f1ea; padding: 9px 6px; font-size: 13px; }
+  .activity th { color: var(--muted); font-weight: 800; }
+  .grid-b {
+    display: grid;
+    grid-template-columns: 260px minmax(0,1fr) 340px;
+    gap: 14px;
+  }
+  .side-nav { padding: 14px; display: grid; gap: 12px; align-self: start; }
+  .side-nav .nav-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px;
+    background: #fff;
+    font-weight: 800;
+  }
+  .side-nav .nav-item.active { background: var(--green); color: #fff; border-color: var(--green); }
+  .workflow { display: grid; gap: 14px; }
+  .filter-bar { padding: 12px; display: grid; grid-template-columns: 1.4fr 1fr 1fr auto; gap: 10px; align-items: end; }
+  .lane-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
+  .lane { padding: 12px; min-height: 210px; }
+  .lane-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-weight: 900;
+    color: var(--green);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 10px;
+  }
+  .queue-card {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+  .queue-card .small { color: var(--muted); font-size: 12px; margin-top: 5px; }
+  .detail-table { padding: 12px; }
+  .detail-table table { width: 100%; border-collapse: collapse; }
+  .detail-table th, .detail-table td { padding: 10px 8px; border-bottom: 1px solid #e5f1ea; text-align: left; font-size: 13px; }
+  .detail-table th { color: var(--muted); }
+  .script-stack { padding: 14px; align-self: start; position: sticky; top: 14px; }
+  .law-list { display: grid; gap: 7px; margin-top: 10px; }
+  .law-item { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: #fff; font-size: 13px; }
+  .law-item.active { border-color: var(--warn); background: #fff8ed; color: #92520d; font-weight: 800; }
+  @media (max-width: 1060px) {
+    .grid-a, .grid-b { grid-template-columns: 1fr; }
+    .right-panel, .script-stack { position: static; }
+    .kpi-grid, .task-grid, .lane-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .settings-grid, .filter-bar, .ghp-strip { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 620px) {
+    .shell { padding: 12px; }
+    .topbar { align-items: flex-start; flex-direction: column; }
+    .kpi-grid, .task-grid, .lane-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <h1>食品稽查儀表板設計提案</h1>
+    </div>
+    <div class="variant-switch" aria-label="版型切換">
+      <button class="active" data-target="variantA">A 快速作業總覽</button>
+      <button data-target="variantB">B 流程佇列管理</button>
+    </div>
+  </div>
+  <div class="note">兩個方向都以實際作業為核心：快速產出書籤腳本、減少漏填、讓 GHP 例外狀態更明顯。</div>
+
+  <section id="variantA" class="variant active">
+    <div class="grid-a">
+      <div class="left-stack">
+        <div class="panel">
+          <div class="settings-grid">
+            <div>
+              <div class="label">專案名稱（關鍵字）</div>
+              <input class="input" value="115年連鎖飲料店稽查專案">
+            </div>
+            <div>
+              <div class="label">承辦人員</div>
+              <select class="select">
+                <option>謝宜玲</option>
+                <option>林柏甫</option>
+                <option>劉恭誌</option>
+              </select>
+            </div>
+            <button class="btn ghost">清空專案</button>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi"><div class="label">今日腳本產出</div><div class="value">5</div><div class="hint">來源文件保存已產出</div></div>
+          <div class="kpi"><div class="label">GHP 狀態</div><div class="value">合格</div><div class="hint">未套用改善法條</div></div>
+          <div class="kpi"><div class="label">專案比對</div><div class="value">有資料</div><div class="hint">關鍵字可套用</div></div>
+          <div class="kpi"><div class="label">待處理</div><div class="value">4</div><div class="hint">尚未產出書籤</div></div>
+        </div>
+
+        <div class="panel">
+          <div class="ghp-strip">
+            <div>
+              <div class="section-title">GHP 內設定 <span class="status"><span class="dot ok"></span>只套用 GHP</span></div>
+              <div style="height:12px"></div>
+              <div class="label">稽查結果</div>
+              <div class="pill-row">
+                <span class="pill active">合格</span>
+                <span class="pill">輔導改善</span>
+                <span class="pill">限期改善</span>
+              </div>
+            </div>
+            <div>
+              <div class="label" style="margin-top:40px">肉品來源查核</div>
+              <div class="pill-row">
+                <span class="pill">非規範對象</span>
+                <span class="pill">不適用</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div style="padding:14px 14px 0">
+            <div class="section-title">稽查項目執行 <span class="status"><span class="dot ok"></span>目前：來源文件保存</span></div>
+          </div>
+          <div class="task-grid">
+            <div class="task-card active">
+              <div>
+                <div class="task-title">來源文件保存</div>
+                <div class="status"><span class="dot ok"></span>書籤腳本已產出</div>
+              </div>
+              <button class="btn primary">產出書籤腳本</button>
+            </div>
+            <div class="task-card">
+              <div>
+                <div class="task-title">GHP</div>
+                <div class="status"><span class="dot"></span>待執行</div>
+              </div>
+              <button class="btn">產出書籤腳本</button>
+            </div>
+            <div class="task-card">
+              <div>
+                <div class="task-title">逾期食品稽查</div>
+                <div class="status"><span class="dot"></span>待執行</div>
+              </div>
+              <button class="btn">產出書籤腳本</button>
+            </div>
+            <div class="task-card">
+              <div>
+                <div class="task-title">登錄查核</div>
+                <div class="status"><span class="dot"></span>待執行</div>
+              </div>
+              <button class="btn">產出書籤腳本</button>
+            </div>
+            <div class="task-card">
+              <div>
+                <div class="task-title">產品責任保險</div>
+                <div class="status"><span class="dot"></span>待執行</div>
+              </div>
+              <button class="btn">產出書籤腳本</button>
+            </div>
+            <div class="task-card">
+              <div>
+                <div class="task-title">標示抽驗</div>
+                <div class="status"><span class="dot"></span>待執行</div>
+              </div>
+              <button class="btn">產出書籤腳本</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel activity">
+          <div class="section-title">最近操作</div>
+          <table>
+            <thead><tr><th>時間</th><th>項目</th><th>狀態</th><th>備註</th></tr></thead>
+            <tbody>
+              <tr><td>18:22</td><td>來源文件保存</td><td>已產出</td><td>專案已套用</td></tr>
+              <tr><td>18:18</td><td>GHP</td><td>待執行</td><td>肉品來源未勾選</td></tr>
+              <tr><td>18:10</td><td>標示抽驗</td><td>已產出</td><td>食品地區別已帶入</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="panel right-panel">
+        <div class="section-title">書籤腳本 <span class="status"><span class="dot ok"></span>可複製</span></div>
+        <div class="script-box" style="margin-top:12px">
+          <div class="label">當前：來源文件保存腳本</div>
+          <pre class="script-code">javascript:(function(){
+var projectName="115年連鎖飲料店稽查專案";
+var undertakerVal="R221159185";
+setSourceYes();
+doSearchWait(function(){ setResult(); });
+})()</pre>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button class="btn primary">複製</button>
+            <button class="btn">全選</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="variantB" class="variant">
+    <div class="grid-b">
+      <aside class="panel side-nav">
+        <div class="section-title">工作範圍</div>
+        <div class="nav-item active"><span>今日稽查</span><span>6</span></div>
+        <div class="nav-item"><span>需改善</span><span>2</span></div>
+        <div class="nav-item"><span>未套專案</span><span>1</span></div>
+        <div class="nav-item"><span>待複製</span><span>4</span></div>
+        <div>
+          <div class="label">共用設定</div>
+          <input class="input" value="115年連鎖飲料店稽查專案">
+          <div style="height:8px"></div>
+          <select class="select"><option>謝宜玲</option><option>劉恭誌</option><option>鍾素葉</option></select>
+        </div>
+      </aside>
+
+      <main class="workflow">
+        <div class="panel filter-bar">
+          <div>
+            <div class="label">搜尋項目</div>
+            <input class="input" value="連鎖飲料店">
+          </div>
+          <div>
+            <div class="label">GHP 結果</div>
+            <select class="select"><option>合格</option><option>輔導改善</option><option>限期改善</option></select>
+          </div>
+          <div>
+            <div class="label">肉品來源</div>
+            <select class="select"><option>未套用</option><option>非規範對象</option><option>不適用</option></select>
+          </div>
+          <button class="btn primary">套用</button>
+        </div>
+
+        <div class="lane-grid">
+          <div class="panel lane">
+            <div class="lane-head"><span>先跑專案</span><span>2</span></div>
+            <div class="queue-card"><strong>來源文件保存</strong><div class="small">套專案、來源文件、結果、承辦</div></div>
+            <div class="queue-card"><strong>產品責任保險</strong><div class="small">有保險預設合格</div></div>
+          </div>
+          <div class="panel lane">
+            <div class="lane-head"><span>GHP 內設定</span><span>1</span></div>
+            <div class="queue-card"><strong>GHP</strong><div class="small">輔導改善時展開法條與期限</div></div>
+          </div>
+          <div class="panel lane">
+            <div class="lane-head"><span>資料查核</span><span>2</span></div>
+            <div class="queue-card"><strong>登錄查核</strong><div class="small">多欄位結果同步合格</div></div>
+            <div class="queue-card"><strong>逾期食品稽查</strong><div class="small">稽查內容選無</div></div>
+          </div>
+          <div class="panel lane">
+            <div class="lane-head"><span>抽驗資料</span><span>1</span></div>
+            <div class="queue-card"><strong>標示抽驗</strong><div class="small">販售通路、註記、食品地區別</div></div>
+          </div>
+        </div>
+
+        <div class="panel detail-table">
+          <div class="section-title">項目明細</div>
+          <table>
+            <thead><tr><th>項目</th><th>專案</th><th>結果</th><th>承辦</th><th>下一步</th></tr></thead>
+            <tbody>
+              <tr><td>來源文件保存</td><td>已偵測</td><td>合格</td><td>謝宜玲</td><td><button class="btn primary">產出</button></td></tr>
+              <tr><td>GHP</td><td>已偵測</td><td>輔導改善</td><td>謝宜玲</td><td><button class="btn">選法條</button></td></tr>
+              <tr><td>標示抽驗</td><td>已偵測</td><td>手動查驗</td><td>謝宜玲</td><td><button class="btn">產出</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </main>
+
+      <aside class="panel script-stack">
+        <div class="section-title">腳本與例外</div>
+        <div style="height:12px"></div>
+        <div class="label">目前選取：GHP</div>
+        <div class="law-list">
+          <div class="law-item active">食安法第8條第1項</div>
+          <div class="law-item">食安法第15條</div>
+          <div class="law-item">食安法第22條第1項</div>
+        </div>
+        <div class="script-box" style="margin-top:12px">
+          <pre class="script-code">setResult(["ctl00_ContentPlaceHolder1_ddlRES"]);
+setNativeSelect(stage,"1");
+selU(["ctl00_ContentPlaceHolder1_ddlreceivepeople"]);</pre>
+          <button class="btn primary" style="width:100%">複製 GHP 腳本</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+</div>
+<script>
+document.querySelectorAll('.variant-switch button').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.variant-switch button').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.variant').forEach(function(v) { v.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.target).classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

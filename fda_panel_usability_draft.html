@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>食品稽查控制面板 - 易操作草稿</title>
+<style>
+  :root {
+    --green: #27764a;
+    --green-deep: #145c39;
+    --green-soft: #edf8f2;
+    --green-pale: #f7fcf9;
+    --line: #c6dfd0;
+    --line-soft: #e2efe8;
+    --text: #173223;
+    --muted: #688a77;
+    --bg: #f3faf6;
+    --white: #fff;
+    --warn: #c87922;
+    --red: #bd3f38;
+    --gray: #a9b9af;
+    --shadow: 0 8px 24px rgba(39, 118, 74, .10);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif;
+    font-size: 17px;
+  }
+  button, input, select, textarea { font: inherit; }
+  button { cursor: pointer; }
+  .page {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+  .brand-mark {
+    width: 5px;
+    height: 36px;
+    background: var(--green);
+  }
+  h1 {
+    margin: 0;
+    color: var(--green);
+    font-size: 26px;
+    letter-spacing: 0;
+  }
+  .quick-state {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 5px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--white);
+    white-space: nowrap;
+  }
+  .workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 14px;
+    align-items: start;
+  }
+  .main {
+    display: grid;
+    gap: 12px;
+  }
+  .panel, .side-panel {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+  }
+  .panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line-soft);
+    color: var(--green);
+    font-weight: 900;
+    font-size: 18px;
+  }
+  .panel-body { padding: 12px 14px; }
+  .config-grid {
+    display: grid;
+    grid-template-columns: minmax(260px, 1.4fr) minmax(220px, .8fr);
+    gap: 12px;
+  }
+  label.field-label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 800;
+  }
+  input, select, textarea {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--text);
+    outline: none;
+  }
+  input, select { min-height: 42px; padding: 8px 10px; }
+  textarea {
+    min-height: 170px;
+    padding: 10px;
+    resize: vertical;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--green); }
+  .ghp-compact {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
+    gap: 14px;
+    align-items: start;
+  }
+  .setting-block {
+    display: grid;
+    gap: 8px;
+  }
+  .setting-title {
+    font-weight: 900;
+    font-size: 16px;
+  }
+  .seg-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .seg {
+    min-height: 38px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 14px;
+    background: #fff;
+    color: var(--green);
+    font-weight: 900;
+  }
+  .seg.active {
+    background: var(--green);
+    border-color: var(--green);
+    color: #fff;
+  }
+  .seg.warn.active { background: var(--warn); border-color: var(--warn); }
+  .seg.red.active { background: var(--red); border-color: var(--red); }
+  .note {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .task-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .task-head strong {
+    color: var(--green);
+    font-size: 18px;
+  }
+  .view-switch {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .view-switch button {
+    border: 0;
+    background: transparent;
+    color: var(--green);
+    padding: 7px 10px;
+    font-weight: 900;
+  }
+  .view-switch button.active {
+    background: var(--green);
+    color: #fff;
+  }
+  .task-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    padding: 12px 14px 14px;
+  }
+  .task-card {
+    min-height: 118px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 7px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    padding: 11px;
+  }
+  .task-card.active {
+    border-color: var(--green);
+    background: var(--green-soft);
+  }
+  .task-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .task-name {
+    font-size: 17px;
+    font-weight: 900;
+    line-height: 1.25;
+  }
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--muted);
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--gray);
+  }
+  .dot.done { background: var(--green); }
+  .task-desc {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .script-btn {
+    width: 100%;
+    min-height: 40px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #eef7f2;
+    color: var(--green);
+    font-weight: 900;
+  }
+  .script-btn:hover { background: #e4f2eb; }
+  .task-card.active .script-btn {
+    background: var(--green);
+    border-color: var(--green);
+    color: #fff;
+  }
+  .side {
+    position: sticky;
+    top: 16px;
+    display: grid;
+    gap: 12px;
+  }
+  .script-panel {
+    padding: 12px;
+  }
+  .script-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 44px;
+    padding: 9px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: linear-gradient(180deg, #edf8f2 0%, #e3f2ea 100%);
+    color: var(--green);
+    font-weight: 900;
+  }
+  .current-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .small-btn {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--green);
+    padding: 6px 9px;
+    font-size: 14px;
+    font-weight: 900;
+  }
+  .script-help {
+    margin: 10px 0 8px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .script-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .primary, .secondary {
+    min-height: 40px;
+    border-radius: 6px;
+    font-weight: 900;
+  }
+  .primary {
+    border: 1px solid var(--green);
+    background: var(--green);
+    color: #fff;
+  }
+  .secondary {
+    border: 1px solid var(--line);
+    background: var(--green-soft);
+    color: var(--green);
+  }
+  .activity-list {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+  }
+  .activity-item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px;
+    align-items: start;
+    padding: 9px;
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    background: var(--green-pale);
+  }
+  .time {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+  .activity-main {
+    min-width: 0;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .activity-main strong {
+    display: block;
+    color: var(--text);
+    font-size: 15px;
+  }
+  .empty {
+    color: var(--muted);
+    font-size: 14px;
+    padding: 12px;
+  }
+  .mini-strip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .mini {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    padding: 8px 10px;
+  }
+  .mini span {
+    display: block;
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 3px;
+  }
+  .mini strong {
+    color: var(--green);
+    font-size: 17px;
+  }
+  @media (max-width: 1120px) {
+    .workspace { grid-template-columns: 1fr; }
+    .side { position: static; grid-template-columns: 1fr 1fr; }
+    .task-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 760px) {
+    body { font-size: 16px; }
+    .page { padding: 12px; }
+    .topbar { align-items: flex-start; flex-direction: column; }
+    .quick-state { justify-content: flex-start; }
+    h1 { font-size: 22px; }
+    .config-grid, .ghp-compact, .side, .mini-strip { grid-template-columns: 1fr; }
+    .task-head { grid-template-columns: 1fr; }
+    .task-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <h1>食品稽查控制面板</h1>
+    </div>
+    <div class="quick-state" aria-label="目前狀態">
+      <span class="pill">目前腳本：<strong id="topCurrent">尚未產出</strong></span>
+      <span class="pill">專案：<strong id="topProject">會自動判斷</strong></span>
+      <span class="pill">GHP：<strong id="topGhp">合格</strong></span>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <main class="main">
+      <section class="panel">
+        <div class="panel-head">共用設定</div>
+        <div class="panel-body">
+          <div class="config-grid">
+            <div>
+              <label class="field-label" for="projectName">專案名稱（空白就不套專案）</label>
+              <input id="projectName" type="text" value="115年連鎖飲料店稽查專案">
+            </div>
+            <div>
+              <label class="field-label" for="undertaker">承辦人員</label>
+              <select id="undertaker">
+                <option>謝宜玲</option>
+                <option>李彩炤</option>
+                <option>林柏甫</option>
+                <option>林靜涵</option>
+                <option>張玉潔</option>
+                <option>劉恭誌</option>
+                <option>歐秉豪</option>
+                <option>鄭世苓</option>
+                <option>鍾素葉</option>
+                <option>簡佑寧</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">GHP 內設定</div>
+        <div class="panel-body ghp-compact">
+          <div class="setting-block">
+            <div class="setting-title">稽查結果</div>
+            <div class="seg-row" id="resultGroup">
+              <button class="seg active" data-result="合格">合格</button>
+              <button class="seg warn" data-result="輔導改善">輔導改善</button>
+              <button class="seg red" data-result="限期改善">限期改善</button>
+            </div>
+            <div class="note" id="resultNote">大部分情境預設合格；輔導改善或限期改善才展開法條與日期。</div>
+          </div>
+          <div class="setting-block">
+            <div class="setting-title">肉品來源查核</div>
+            <div class="seg-row" id="meatGroup">
+              <button class="seg" data-meat="非規範對象">非規範對象</button>
+              <button class="seg" data-meat="不適用">不適用</button>
+            </div>
+            <div class="note">只有 GHP 腳本會使用；預設不選，遇到肉品再點需要的項目。</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="task-head">
+          <div>
+            <strong>稽查項目執行</strong>
+            <div class="note">把「要做什麼」放在卡片上，腳本與操作紀錄固定在右側。</div>
+          </div>
+          <div class="view-switch" aria-label="顯示密度">
+            <button class="active">標準</button>
+            <button>精簡</button>
+          </div>
+        </div>
+
+        <div class="panel-body mini-strip">
+          <div class="mini"><span>已產出</span><strong id="countDone">0</strong></div>
+          <div class="mini"><span>待執行</span><strong id="countTodo">6</strong></div>
+          <div class="mini"><span>最近操作</span><strong id="countActivity">0</strong></div>
+          <div class="mini"><span>目前承辦</span><strong id="miniOwner">謝宜玲</strong></div>
+        </div>
+
+        <div class="task-grid" id="taskGrid">
+          <article class="task-card" data-name="來源文件保存" data-desc="套共用設定、專案與合格結果。">
+            <div class="task-top">
+              <div class="task-name">來源文件保存</div>
+              <span class="status"><i class="dot"></i><span>待產出</span></span>
+            </div>
+            <div class="task-desc">固定合格，會依專案欄位判斷是否套用專案。</div>
+            <button class="script-btn">產出書籤腳本</button>
+          </article>
+
+          <article class="task-card" data-name="GHP" data-desc="讀取 GHP 內設定，包含稽查結果、法條、限期日期、肉品來源。">
+            <div class="task-top">
+              <div class="task-name">GHP</div>
+              <span class="status"><i class="dot"></i><span>待產出</span></span>
+            </div>
+            <div class="task-desc">只在這裡使用肉品來源設定，避免干擾其他項目。</div>
+            <button class="script-btn">產出書籤腳本</button>
+          </article>
+
+          <article class="task-card" data-name="逾期食品稽查" data-desc="固定合格，獨立於 GHP 設定。">
+            <div class="task-top">
+              <div class="task-name">逾期食品稽查</div>
+              <span class="status"><i class="dot"></i><span>待產出</span></span>
+            </div>
+            <div class="task-desc">不讀取肉品來源，也不讀取 GHP 法條。</div>
+            <button class="script-btn">產出書籤腳本</button>
+          </article>
+
+          <article class="task-card" data-name="登錄查核" data-desc="固定合格，獨立執行。">
+            <div class="task-top">
+              <div class="task-name">登錄查核</div>
+              <span class="status"><i class="dot"></i><span>待產出</span></span>
+            </div>
+            <div class="task-desc">套承辦與專案，不被 GHP 稽查結果影響。</div>
+            <button class="script-btn">產出書籤腳本</button>
+          </article>
+
+          <article class="task-card" data-name="產品責任保險" data-desc="有保險且未過期時預設合格。">
+            <div class="task-top">
+              <div class="task-name">產品責任保險</div>
+              <span class="status"><i class="dot"></i><span>待產出</span></span>
+            </div>
+            <div class="task-desc">預設合格；過期時再手動調整。</div>
+            <button class="script-btn">產出書籤腳本</button>
+          </article>
+
+          <article class="task-card" data-name="標示抽驗" data-desc="產出框架，查驗結果仍保留人工判斷。">
+            <div class="task-top">
+              <div class="task-name">標示抽驗</div>
+              <span class="status"><i class="dot"></i><span>待產出</span></span>
+            </div>
+            <div class="task-desc">逐項查驗結果由使用者自行勾選。</div>
+            <button class="script-btn">產出書籤腳本</button>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <aside class="side">
+      <section class="side-panel script-panel">
+        <div class="script-title">
+          <span class="current-name">目前：<span id="currentScript">尚未產出腳本</span></span>
+          <button class="small-btn" id="clearScript">清空</button>
+        </div>
+        <p class="script-help">複製後切換到稽查頁面，在網址列貼上並按 Enter。</p>
+        <textarea id="scriptText" readonly placeholder="按下左側任一項目後，這裡顯示書籤腳本。"></textarea>
+        <div class="script-actions">
+          <button class="primary" id="copyBtn">複製</button>
+          <button class="secondary" id="selectBtn">全選</button>
+        </div>
+        <p class="note" id="scriptStatus">尚未產出腳本。</p>
+      </section>
+
+      <section class="side-panel">
+        <div class="panel-head">最近操作</div>
+        <div class="activity-list" id="activityList">
+          <div class="empty">還沒有操作紀錄。產出腳本、複製、全選都會記在這裡。</div>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script>
+  const tasks = Array.from(document.querySelectorAll(".task-card"));
+  const activityList = document.getElementById("activityList");
+  const scriptText = document.getElementById("scriptText");
+  const currentScript = document.getElementById("currentScript");
+  const topCurrent = document.getElementById("topCurrent");
+  const topProject = document.getElementById("topProject");
+  const topGhp = document.getElementById("topGhp");
+  const countDone = document.getElementById("countDone");
+  const countTodo = document.getElementById("countTodo");
+  const countActivity = document.getElementById("countActivity");
+  const miniOwner = document.getElementById("miniOwner");
+  const projectName = document.getElementById("projectName");
+  const undertaker = document.getElementById("undertaker");
+  const scriptStatus = document.getElementById("scriptStatus");
+  let activityCount = 0;
+
+  function timeLabel() {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  }
+
+  function getProjectState() {
+    return projectName.value.trim() ? projectName.value.trim() : "未套專案";
+  }
+
+  function getGhpResult() {
+    return document.querySelector("#resultGroup .active")?.dataset.result || "合格";
+  }
+
+  function updateTopState() {
+    topProject.textContent = getProjectState();
+    topGhp.textContent = getGhpResult();
+    miniOwner.textContent = undertaker.options[undertaker.selectedIndex].text;
+  }
+
+  function addActivity(title, detail) {
+    if (activityList.querySelector(".empty")) activityList.innerHTML = "";
+    activityCount += 1;
+    countActivity.textContent = activityCount;
+    const item = document.createElement("div");
+    item.className = "activity-item";
+    item.innerHTML = `<span class="time">${timeLabel()}</span><div class="activity-main"><strong>${title}</strong>${detail}</div>`;
+    activityList.prepend(item);
+    Array.from(activityList.children).slice(4).forEach(el => el.remove());
+  }
+
+  function refreshCounts() {
+    const done = tasks.filter(card => card.classList.contains("active")).length;
+    countDone.textContent = done;
+    countTodo.textContent = tasks.length - done;
+  }
+
+  function makeScript(name, desc) {
+    const project = getProjectState();
+    const owner = undertaker.options[undertaker.selectedIndex].text;
+    const ghp = getGhpResult();
+    const meat = Array.from(document.querySelectorAll("#meatGroup .active")).map(x => x.dataset.meat).join("、") || "未選";
+    return `javascript:(function(){
+/* 草稿預覽：${name} */
+var projectName=${JSON.stringify(projectName.value.trim())};
+var hasProjectName=${projectName.value.trim() ? "true" : "false"};
+var undertaker=${JSON.stringify(owner)};
+var ghpResult=${JSON.stringify(ghp)};
+var meatSource=${JSON.stringify(meat)};
+var note=${JSON.stringify(desc)};
+console.log("產出腳本", { projectName, hasProjectName, undertaker, ghpResult, meatSource, note });
+})();`;
+  }
+
+  tasks.forEach(card => {
+    card.querySelector(".script-btn").addEventListener("click", () => {
+      updateTopState();
+      tasks.forEach(c => c.classList.remove("active"));
+      card.classList.add("active");
+      card.querySelector(".dot").classList.add("done");
+      card.querySelector(".status span").textContent = "書籤腳本已產出";
+      const name = card.dataset.name;
+      currentScript.textContent = `${name}腳本`;
+      topCurrent.textContent = name;
+      scriptText.value = makeScript(name, card.dataset.desc);
+      scriptStatus.textContent = "書籤腳本已產出，請按複製。";
+      addActivity(`產出：${name}`, `專案：${getProjectState()}，承辦：${miniOwner.textContent}`);
+      refreshCounts();
+    });
+  });
+
+  document.querySelectorAll("#resultGroup .seg").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#resultGroup .seg").forEach(x => x.classList.remove("active"));
+      btn.classList.add("active");
+      updateTopState();
+      addActivity("更新 GHP 稽查結果", `目前設定：${btn.dataset.result}`);
+    });
+  });
+
+  document.querySelectorAll("#meatGroup .seg").forEach(btn => {
+    btn.addEventListener("click", () => {
+      btn.classList.toggle("active");
+      const picked = Array.from(document.querySelectorAll("#meatGroup .active")).map(x => x.dataset.meat).join("、") || "未選";
+      addActivity("更新肉品來源查核", `目前設定：${picked}`);
+    });
+  });
+
+  document.getElementById("copyBtn").addEventListener("click", async () => {
+    if (!scriptText.value) return;
+    try {
+      await navigator.clipboard.writeText(scriptText.value);
+      scriptStatus.textContent = "已複製到剪貼簿。";
+      addActivity("複製腳本", `目前：${currentScript.textContent}`);
+    } catch (e) {
+      scriptText.select();
+      scriptStatus.textContent = "瀏覽器阻擋自動複製，已改為全選，請按 Ctrl+C。";
+      addActivity("複製被瀏覽器阻擋", "已幫你全選腳本。");
+    }
+  });
+
+  document.getElementById("selectBtn").addEventListener("click", () => {
+    scriptText.focus();
+    scriptText.select();
+    addActivity("全選腳本", `目前：${currentScript.textContent}`);
+  });
+
+  document.getElementById("clearScript").addEventListener("click", () => {
+    scriptText.value = "";
+    currentScript.textContent = "尚未產出腳本";
+    topCurrent.textContent = "尚未產出";
+    scriptStatus.textContent = "尚未產出腳本。";
+    tasks.forEach(card => card.classList.remove("active"));
+    addActivity("清空目前腳本", "保留左側各項產出狀態。");
+  });
+
+  projectName.addEventListener("input", updateTopState);
+  undertaker.addEventListener("change", updateTopState);
+  updateTopState();
+  refreshCounts();
+</script>
+</body>
+</html>
