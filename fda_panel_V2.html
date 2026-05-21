@@ -116,7 +116,7 @@
   <div class="row">
     <div class="field">
       <span class="flabel">專案名稱</span>
-      <input type="text" id="projectName" value="115年連鎖飲料店稽查專案" placeholder="目前未填專案，產出腳本時會自動略過專案套用">
+      <input type="text" id="projectName" value="" placeholder="目前未填專案，產出腳本時會自動略過專案套用">
     </div>
     <div class="field">
       <span class="flabel">承辦人員</span>
@@ -358,8 +358,8 @@ function buildCommon(cfg) {
     // 設定稽查結果（支援多種id）
     'function setNativeSelect(el,val){if(!el)return false;el.value=val;el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}));if(typeof el.onchange==="function"){try{el.onchange.call(el);}catch(e){console.warn(e);}}if($){$(el).trigger("change");if($(el).selectpicker){$(el).selectpicker("val",val);$(el).selectpicker("refresh");$(el).trigger("changed.bs.select");}}return true;}',
     'function setResult(ids){ids.forEach(function(id){var el=document.getElementById(id);if(!el)return;var opt=Array.from(el.options||[]).find(function(o){return o.text.trim()===inspectionResult;});if(opt)setNativeSelect(el,opt.value);});}',
-    // 設定稽查階段+承辦人員
-    'function setStageAndU(stageId,uId,cb){var s=document.getElementById(stageId);if(s){var opt=Array.from(s.options||[]).find(function(o){return o.text.includes("承辦");});if(opt)setNativeSelect(s,opt.value);}setTimeout(function(){selU([uId]);if(cb)cb();},300);}',
+    // 設定稽查階段+承辦人員（輪詢等承辦選項載入）
+    'function setStageAndU(stageId,uId,cb){var s=document.getElementById(stageId);if(s){var opt=Array.from(s.options||[]).find(function(o){return o.text.includes("承辦");});if(opt)setNativeSelect(s,opt.value);}var tries=0;var t=setInterval(function(){tries++;var u=document.getElementById(uId);if(u&&u.options&&u.options.length>1){clearInterval(t);if($&&$(u).selectpicker){$(u).selectpicker("val",undertakerVal);$(u).selectpicker("refresh");}else{u.value=undertakerVal;u.dispatchEvent(new Event("change",{bubbles:true}));}if(cb)setTimeout(cb,200);}else if(tries>40){clearInterval(t);console.warn("setStageAndU timeout:"+uId);if(cb)cb();}},150);}',
   ].join('\n');
 }
 
@@ -574,7 +574,8 @@ function runGHP() {
     '            setResult(["ctl00_ContentPlaceHolder1_ddlRES"]);\n' +
     '            var s=document.getElementById("ctl00_ContentPlaceHolder1_ddlstep");\n' +
     '            if(s){setNativeSelect(s,"1");}\n' +
-    '            setTimeout(function(){selU(["ctl00_ContentPlaceHolder1_ddlreceivepeople"]);},600);\n' +
+    // 等 ajax 把 ddlreceivepeople 重置後再選
+    '            var ghpTries=0;var ghpT=setInterval(function(){ghpTries++;var u=document.getElementById("ctl00_ContentPlaceHolder1_ddlreceivepeople");if(u&&u.options&&u.options.length>1&&ghpTries>2){clearInterval(ghpT);if($&&$(u).selectpicker){$(u).selectpicker("val",undertakerVal);$(u).selectpicker("refresh");}else{u.value=undertakerVal;u.dispatchEvent(new Event("change",{bubbles:true}));}}else if(ghpTries>40){clearInterval(ghpT);}},300);\n' +
     '          },600);\n' +
     '        });\n' +
     '      });\n' +
