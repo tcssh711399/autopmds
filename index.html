@@ -150,31 +150,11 @@
     <div class="section-sub hidden" id="sub-輔導改善">
       <div class="sub-title">選擇法條（輔導改善）</div>
       <div class="law-grid" id="laws-輔導改善">
-        <label class="law-item"><input type="checkbox" value="食安法第8條第1項"> 食安法第8條第1項</label>
-        <label class="law-item"><input type="checkbox" value="食安法第15條"> 食安法第15條</label>
-        <label class="law-item"><input type="checkbox" value="食安法第17條"> 食安法第17條</label>
-        <label class="law-item"><input type="checkbox" value="食安法第18條"> 食安法第18條</label>
-        <label class="law-item"><input type="checkbox" value="食安法第22條第1項"> 食安法第22條第1項</label>
-        <label class="law-item"><input type="checkbox" value="食安法第22條第2項"> 食安法第22條第2項</label>
-        <label class="law-item"><input type="checkbox" value="食安法第24條"> 食安法第24條</label>
-        <label class="law-item"><input type="checkbox" value="食安法第25條第2項"> 食安法第25條第2項</label>
-        <label class="law-item"><input type="checkbox" value="食安法第28條第1項"> 食安法第28條第1項</label>
-        <label class="law-item"><input type="checkbox" value="食安法第47條"> 食安法第47條</label>
       </div>
     </div>
     <div class="section-sub hidden" id="sub-限期改善">
       <div class="sub-title">選擇法條（限期改善）</div>
       <div class="law-grid" id="laws-限期改善">
-        <label class="law-item"><input type="checkbox" value="食安法第8條第1項"> 食安法第8條第1項</label>
-        <label class="law-item"><input type="checkbox" value="食安法第15條"> 食安法第15條</label>
-        <label class="law-item"><input type="checkbox" value="食安法第17條"> 食安法第17條</label>
-        <label class="law-item"><input type="checkbox" value="食安法第18條"> 食安法第18條</label>
-        <label class="law-item"><input type="checkbox" value="食安法第22條第1項"> 食安法第22條第1項</label>
-        <label class="law-item"><input type="checkbox" value="食安法第22條第2項"> 食安法第22條第2項</label>
-        <label class="law-item"><input type="checkbox" value="食安法第24條"> 食安法第24條</label>
-        <label class="law-item"><input type="checkbox" value="食安法第25條第2項"> 食安法第25條第2項</label>
-        <label class="law-item"><input type="checkbox" value="食安法第28條第1項"> 食安法第28條第1項</label>
-        <label class="law-item"><input type="checkbox" value="食安法第47條"> 食安法第47條</label>
       </div>
       <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <span class="flabel">限期改善期限：</span>
@@ -572,10 +552,46 @@ function runGHP() {
     '          setTimeout(function(){\n' +
     mc + '\n' +
     '            setResult(["ctl00_ContentPlaceHolder1_ddlRES"]);\n' +
-    '            var s=document.getElementById("ctl00_ContentPlaceHolder1_ddlstep");\n' +
-    '            if(s){setNativeSelect(s,"1");}\n' +
-    // 等 ajax 把 ddlreceivepeople 重置後再選
-    '            var ghpTries=0;var ghpT=setInterval(function(){ghpTries++;var u=document.getElementById("ctl00_ContentPlaceHolder1_ddlreceivepeople");if(u&&u.options&&u.options.length>1&&ghpTries>2){clearInterval(ghpT);if($&&$(u).selectpicker){$(u).selectpicker("val",undertakerVal);$(u).selectpicker("refresh");}else{u.value=undertakerVal;u.dispatchEvent(new Event("change",{bubbles:true}));}}else if(ghpTries>40){clearInterval(ghpT);}},300);\n' +
+    '            function setGhpStageAndReceiver(){\n' +
+    '              var s=document.getElementById("ctl00_ContentPlaceHolder1_ddlstep");\n' +
+    '              if(s){setNativeSelect(s,"1");}\n' +
+    '              var ghpTries=0;\n' +
+    '              var ghpT=setInterval(function(){\n' +
+    '                ghpTries++;\n' +
+    '                var isSystemBusy=false;\n' +
+    '                if(window.Sys&&Sys.WebForms&&Sys.WebForms.PageRequestManager){\n' +
+    '                  try{isSystemBusy=Sys.WebForms.PageRequestManager.getInstance().get_isInAsyncPostBack();}catch(e){isSystemBusy=false;}\n' +
+    '                }\n' +
+    '                var u=document.getElementById("ctl00_ContentPlaceHolder1_ddlreceivepeople");\n' +
+    '                if(u&&u.options&&u.options.length>1&&!isSystemBusy){\n' +
+    '                  setTimeout(function(){\n' +
+    '                    var busyAgain=false;\n' +
+    '                    if(window.Sys&&Sys.WebForms&&Sys.WebForms.PageRequestManager){\n' +
+    '                      try{busyAgain=Sys.WebForms.PageRequestManager.getInstance().get_isInAsyncPostBack();}catch(e){busyAgain=false;}\n' +
+    '                    }\n' +
+    '                    if(busyAgain)return;\n' +
+    '                    clearInterval(ghpT);\n' +
+    '                    u=document.getElementById("ctl00_ContentPlaceHolder1_ddlreceivepeople");\n' +
+    '                    if(!u)return;\n' +
+    '                    console.log("🎯 [防蓋台成功] 系統 AJAX 已落地且停止忙碌，開始填入承辦人...");\n' +
+    '                    if($&&$(u).selectpicker){\n' +
+    '                      $(u).selectpicker("val",undertakerVal);\n' +
+    '                      $(u).selectpicker("refresh");\n' +
+    '                      $(u).trigger("changed.bs.select");\n' +
+    '                    }else{\n' +
+    '                      u.value=undertakerVal;\n' +
+    '                      u.dispatchEvent(new Event("input",{bubbles:true}));\n' +
+    '                      u.dispatchEvent(new Event("change",{bubbles:true}));\n' +
+    '                    }\n' +
+    '                  },200);\n' +
+    '                }else if(ghpTries>40){\n' +
+    '                  clearInterval(ghpT);\n' +
+    '                  console.warn("❌ [逾時] 等不到系統 AJAX 穩定");\n' +
+    '                }\n' +
+    '              },300);\n' +
+    '            }\n' +
+    // GHP 預覽/流程分頁會重新渲染欄位；先切到 tab4，再等 ASP.NET AJAX 完全停止後補選承辦員
+    '            goTab("#tab4",function(){setGhpStageAndReceiver();});\n' +
     '          },600);\n' +
     '        });\n' +
     '      });\n' +
