@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>食品稽查控制面板</title>
+<style>
+  :root {
+    --green: #2d7a4f;
+    --green-light: #e8f5ee;
+    --green-mid: #4a9e6e;
+    --border: #c8e0d2;
+    --text: #1a2e22;
+    --text-muted: #6b8f7a;
+    --bg: #f4faf7;
+    --white: #ffffff;
+    --red: #c0392b;
+    --orange: #d4721a;
+    --shadow: 0 2px 12px rgba(45,122,79,0.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Microsoft JhengHei','微軟正黑體',sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 20px; }
+  h1 { font-size: 22px; color: var(--green); border-left: 4px solid var(--green); padding-left: 12px; margin-bottom: 20px; font-weight: 700; letter-spacing: 1px; }
+  .panel { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; box-shadow: var(--shadow); }
+  .panel-title { font-size: 19px; font-weight: 700; color: var(--green); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .ghp-settings-title { font-size: 19px; font-weight: 800; color: var(--green); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .ghp-setting-block { padding: 4px 0 14px; }
+  .ghp-setting-block + .ghp-setting-block { border-top: 1px solid var(--border); padding-top: 14px; }
+  .ghp-setting-label { display: block; font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 160px; }
+  .flabel { font-size: 14px; color: var(--text-muted); font-weight: 600; }
+  input[type=text], select, input[type=date] { border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-size: 15px; font-family: inherit; color: var(--text); background: var(--white); outline: none; transition: border 0.2s; width: 100%; }
+  input:focus, select:focus { border-color: var(--green-mid); }
+  .radio-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .rbtn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 15px; border: 1.5px solid var(--border); border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.15s; user-select: none; color: var(--text-muted); }
+  .rbtn.act-合格 { background: var(--green); color: #fff; border-color: var(--green); }
+  .rbtn.act-輔導改善 { background: var(--orange); color: #fff; border-color: var(--orange); }
+  .rbtn.act-限期改善 { background: var(--red); color: #fff; border-color: var(--red); }
+  .rbtn.act-非規範對象 { background: var(--green); color: #fff; border-color: var(--green); }
+  .rbtn.act-不適用 { background: #1a5f8a; color: #fff; border-color: #1a5f8a; }
+  .rbtn.off { background: #fff; color: var(--text-muted); border-color: var(--border); }
+  .section-sub { background: var(--green-light); border-radius: 8px; padding: 12px 14px; margin-top: 10px; border: 1px solid var(--border); }
+  .sub-title { font-size: 14px; font-weight: 700; color: var(--green); margin-bottom: 8px; }
+  .law-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap: 6px; max-height: 200px; overflow-y: auto; }
+  .law-item { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--white); cursor: pointer; font-size: 14px; transition: all 0.15s; user-select: none; }
+  .law-item:hover { border-color: var(--green-mid); }
+  .law-item.selected { background: var(--green-light); border-color: var(--green); color: var(--green); font-weight: 600; }
+  .law-item input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--green); cursor: pointer; flex-shrink: 0; }
+  .items-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+  @media(max-width:900px){ body{padding:14px;} .panel{padding:14px;} .items-grid{grid-template-columns:repeat(2,1fr);} }
+  @media(max-width:560px){ body{padding:10px;} h1{font-size:18px;} .panel{padding:12px;border-radius:8px;} .field{min-width:100%;} .items-grid{grid-template-columns:1fr;} .rbtn{flex:1 1 auto;justify-content:center;} }
+  .item-card { border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; background: var(--white); transition: all 0.15s; cursor: pointer; min-height: 86px; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+  .item-card:hover { border-color: var(--green-mid); background: #eef7f2; box-shadow: var(--shadow); }
+  .item-card:active { transform: scale(0.99); }
+  .item-card.active { background: var(--green); border-color: var(--green); color: #fff; box-shadow: var(--shadow); }
+  .item-card.active:hover { background: #256f48; border-color: #256f48; }
+  .item-name { font-size: 16px; font-weight: 700; }
+  .item-status { font-size: 14px; color: var(--text-muted); min-height: 16px; display: flex; align-items: center; gap: 5px; }
+  .item-card.active .item-status { color: #e8f5ee; }
+  .btn { display: block; width: 100%; padding: 9px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 15px; font-family: inherit; font-weight: 600; transition: all 0.15s; text-align: center; }
+  .btn-script { background: #eef7f2; color: var(--green); border: 1px solid var(--border); }
+  .btn-script:hover { background: #e3f1e9; }
+  .btn-script:active { transform: scale(0.97); }
+  .btn-script.active { background: var(--green); color: #fff; border-color: var(--green); }
+  .sdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .item-card.active .sdot { background:#fff; }
+  .d-gray{background:#ccc;} .d-green{background:var(--green);} .d-orange{background:var(--orange);} .d-red{background:var(--red);}
+  .hidden { display: none !important; }
+  .tip { font-size: 13px; color: var(--text-muted); margin-top: 8px; font-style: italic; }
+  .action-notice { display: flex; align-items: center; gap: 10px; margin: -8px 0 16px; padding: 12px 16px; border: 1.5px solid #e2b45d; border-left: 5px solid var(--orange); border-radius: 8px; background: #fff7e8; color: #8a4b10; font-size: 16px; font-weight: 800; line-height: 1.45; box-shadow: 0 2px 10px rgba(212,114,26,0.12); }
+  .action-notice strong { color: #7a3d08; }
+  .inline-notice { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 10px 12px; border: 1px solid #e2b45d; border-radius: 7px; background: #fffaf0; color: #8a4b10; font-size: 14px; font-weight: 800; line-height: 1.4; }
+  #execDialog { position: fixed; top: 88px; right: 20px; background: #fff; border: 2px solid var(--green); border-radius: 10px; padding: 12px 12px 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 9999; width: 360px; min-width: 280px; max-width: calc(100vw - 24px); max-height: calc(100vh - 96px); overflow: hidden; display: flex; flex-direction: column; }
+  #execDialog .dt { font-size: 15px; font-weight: 700; color: var(--green); margin: 0; line-height: 1.35; display: flex; align-items: center; min-height: 28px; }
+  #execDialog .dragbar { cursor: grab; user-select: none; flex-shrink: 0; background: linear-gradient(180deg, #ecf7f1 0%, #dff0e8 100%); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; min-height: 44px; }
+  #execDialog .dragbar:active { cursor: grabbing; }
+  #execDialog .title-actions { display: flex; gap: 4px; align-items: center; }
+  #execDialog .title-btn { width: 52px; height: 26px; background: #eef7f2; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 14px; color: var(--green); font-family: inherit; font-weight: 700; }
+  #execBody { display: flex; flex: 1 1 auto; flex-direction: column; gap: 8px; min-height: 0; overflow: hidden; }
+  #execDialog .resize-edge { position: absolute; z-index: 2; }
+  #execDialog .resize-left { left: -6px; top: 14px; bottom: 14px; width: 12px; cursor: ew-resize; }
+  #execDialog .resize-right { right: -6px; top: 14px; bottom: 14px; width: 12px; cursor: ew-resize; }
+  #execDialog .resize-top { left: 14px; right: 14px; top: -6px; height: 12px; cursor: ns-resize; }
+  #execDialog .resize-bottom { left: 14px; right: 14px; bottom: -6px; height: 12px; cursor: ns-resize; }
+  #execDialog .resize-tl { left: -6px; top: -6px; width: 16px; height: 16px; cursor: nwse-resize; }
+  #execDialog .resize-tr { right: -6px; top: -6px; width: 16px; height: 16px; cursor: nesw-resize; }
+  #execDialog .resize-bl { left: -6px; bottom: -6px; width: 16px; height: 16px; cursor: nesw-resize; }
+  #execDialog .resize-br { right: -6px; bottom: -6px; width: 16px; height: 16px; cursor: nwse-resize; }
+  #execDialog .dd { flex-shrink: 0; font-size: 14px; color: #666; margin-bottom: 0; }
+  #execDialog textarea { width: 100%; flex: 1 1 auto; height: auto; font-size: 13px; border: 1px solid var(--border); border-radius: 4px; padding: 6px; resize: none; font-family: Consolas,monospace; min-height: 76px; }
+  #execDialog .dbtns { display: grid; grid-template-columns: minmax(96px, 0.75fr) minmax(0, 1.25fr); flex-shrink: 0; gap: 8px; margin-top: 0; align-items: stretch; }
+  #execDialog .dbtns button { padding: 7px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-family: inherit; font-weight: 600; }
+  #execDialog .bcopy { background: var(--green); color: #fff; }
+  #execDialog .bcopy:active { transform: scale(0.97); }
+  #execDialog .state-summary { min-height: 34px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 8px; background: #eef7f2; color: var(--green); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-weight: 700; line-height: 1.35; text-align: center; overflow: hidden; white-space: nowrap; }
+  #execDialog .state-summary .state-part { flex: 0 0 auto; min-width: 0; }
+  #execDialog .state-summary .state-project { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #execDialog .bookmark-help { min-height: 34px; display: flex; align-items: center; justify-content: center; padding: 6px 8px; background: #eef7f2; color: var(--text-muted); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-weight: 700; line-height: 1.35; text-align: center; }
+  #execDialog .bclose { background: #eee; color: #555; }
+  #execStatus { flex-shrink: 0; font-size: 13px; color: var(--text-muted); min-height: 16px; margin-top: 0; }
+</style>
+</head>
+<body>
+
+<h1>🍃 PMDS自動書籤控制面板</h1>
+
+<div class="action-notice">
+  <span>⚠️</span>
+  <div><strong>書籤使用說明：</strong>點書籤前，請先切換到對應的稽查項目頁面，再執行書籤腳本。</div>
+</div>
+
+<!-- 共用設定 -->
+<div class="panel">
+  <div class="panel-title">⚙️ 共用設定</div>
+  <div class="row">
+    <div class="field">
+      <span class="flabel">專案名稱</span>
+      <input type="text" id="projectName" value="" placeholder="目前未填專案，產出腳本時會自動略過專案套用">
+    </div>
+    <div class="field">
+      <span class="flabel">承辦人員</span>
+      <select id="undertaker">
+        <option value="R221159185">謝宜玲</option>
+        <option value="M513234">李彩炤</option>
+        <option value="ultratak">林柏甫</option>
+        <option value="M221958782">林靜涵</option>
+        <option value="yuchieh999">張玉潔</option>
+        <option value="gio">劉恭誌</option>
+        <option value="f00434">歐秉豪</option>
+        <option value="T222070925">鄭世苓</option>
+        <option value="M221274478">鍾素葉</option>
+        <option value="youning">簡佑寧</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- GHP 內設定 -->
+<div class="panel" id="ghpSettingsPanel">
+  <div class="ghp-settings-title">🏭 GHP常用設定</div>
+
+  <div class="ghp-setting-block">
+    <span class="ghp-setting-label">稽查結果</span>
+    <div class="radio-group">
+      <span class="rbtn act-合格" data-result="合格" onclick="selectResult('合格')">✅ 合格</span>
+      <span class="rbtn" data-result="輔導改善" onclick="selectResult('輔導改善')">⚠️ 輔導改善</span>
+      <span class="rbtn" data-result="限期改善" onclick="selectResult('限期改善')">🚨 限期改善</span>
+    </div>
+    <div class="section-sub hidden" id="sub-輔導改善">
+      <div class="sub-title">選擇法條（輔導改善）</div>
+      <div class="law-grid" id="laws-輔導改善">
+      </div>
+    </div>
+    <div class="section-sub hidden" id="sub-限期改善">
+      <div class="sub-title">選擇法條（限期改善）</div>
+      <div class="law-grid" id="laws-限期改善">
+      </div>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span class="flabel">限期改善期限：</span>
+        <input type="date" id="deadlineDate" style="max-width:180px;">
+      </div>
+    </div>
+  </div>
+
+  <div class="ghp-setting-block">
+    <span class="ghp-setting-label">肉品來源查核</span>
+    <div class="radio-group" id="meatGroup">
+      <button type="button" class="rbtn off" data-meat="非規範對象" onclick="toggleMeatOption('非規範對象')">非規範對象</button>
+      <button type="button" class="rbtn off" data-meat="不適用" onclick="toggleMeatOption('不適用')">不適用</button>
+    </div>
+    <p class="tip">※ 肉品來源只會套用在 GHP；預設不選，根據肉源稽查與否選擇。</p>
+  </div>
+</div>
+
+<!-- 稽查項目 -->
+<div class="panel">
+  <div class="panel-title">🔍 稽查項目執行</div>
+  <div class="inline-notice">⚠️ 點擊下方卡片產出書籤腳本後製作成書籤。</div>
+  <div class="items-grid">
+    <div class="item-card" id="card-source" role="button" tabindex="0" onclick="runSource()" onkeydown="cardKeyRun(event, runSource)">
+      <div class="item-name">📄 來源文件保存</div>
+      <div class="item-status" id="log-source"><span class="sdot d-gray"></span>待產出</div>
+    </div>
+    <div class="item-card" id="card-ghp" role="button" tabindex="0" onclick="runGHP()" onkeydown="cardKeyRun(event, runGHP)">
+      <div class="item-name">🏭 GHP</div>
+      <div class="item-status" id="log-ghp"><span class="sdot d-gray"></span>待產出</div>
+    </div>
+    <div class="item-card" id="card-expired" role="button" tabindex="0" onclick="runExpired()" onkeydown="cardKeyRun(event, runExpired)">
+      <div class="item-name">⏰ 逾期食品稽查</div>
+      <div class="item-status" id="log-expired"><span class="sdot d-gray"></span>待產出</div>
+    </div>
+    <div class="item-card" id="card-reg" role="button" tabindex="0" onclick="runReg()" onkeydown="cardKeyRun(event, runReg)">
+      <div class="item-name">📝 登錄查核</div>
+      <div class="item-status" id="log-reg"><span class="sdot d-gray"></span>待產出</div>
+    </div>
+    <div class="item-card" id="card-insurance" role="button" tabindex="0" onclick="runInsurance()" onkeydown="cardKeyRun(event, runInsurance)">
+      <div class="item-name">🛡️ 產品責任保險</div>
+      <div class="item-status" id="log-insurance"><span class="sdot d-gray"></span>待產出</div>
+    </div>
+    <div class="item-card" id="card-label" role="button" tabindex="0" onclick="runLabel()" onkeydown="cardKeyRun(event, runLabel)">
+      <div class="item-name">🏷️ 標示抽驗</div>
+      <div class="item-status" id="log-label"><span class="sdot d-gray"></span>待產出</div>
+    </div>
+  </div>
+</div>
+
+<div id="execDialog" class="hidden">
+  <div class="resize-edge resize-left" data-resize-dir="left"></div>
+  <div class="resize-edge resize-right" data-resize-dir="right"></div>
+  <div class="resize-edge resize-top" data-resize-dir="top"></div>
+  <div class="resize-edge resize-bottom" data-resize-dir="bottom"></div>
+  <div class="resize-edge resize-tl" data-resize-dir="top-left"></div>
+  <div class="resize-edge resize-tr" data-resize-dir="top-right"></div>
+  <div class="resize-edge resize-bl" data-resize-dir="bottom-left"></div>
+  <div class="resize-edge resize-br" data-resize-dir="bottom-right"></div>
+  <div class="dragbar" id="execDragbar" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+    <div class="dt" id="execTitle">📋 當前：書籤腳本</div>
+    <div class="title-actions">
+      <button type="button" class="title-btn" onclick="document.getElementById('execDialog').classList.add('hidden')">關閉</button>
+    </div>
+  </div>
+  <div id="execBody">
+    <div class="state-summary" id="execStateSummary">承辦：-- ｜ 結果：--</div>
+    <textarea id="execCode" readonly></textarea>
+    <div id="execStatus">書籤腳本已產出，請按複製。</div>
+    <div class="dbtns">
+      <button class="bcopy" onclick="copyScript()">📋 複製</button>
+      <div class="bookmark-help">放進書籤：新增書籤後，把網址改成這段腳本。</div>
+    </div>
+  </div>
+</div>
+
+<script>
+var currentResult = '合格';
+var currentMeats = {
+  '非規範對象': false,
+  '不適用': false
+};
+
+function cardKeyRun(event, runner) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  runner();
+}
+
+function hideScriptDialogForSettingChange() {
+  var d = document.getElementById('execDialog');
+  if (!d || d.classList.contains('hidden')) return;
+  d.classList.add('hidden');
+  document.getElementById('execStatus').textContent = '設定已變更，請重新產出書籤腳本。';
+  document.getElementById('execStatus').style.color = 'var(--text-muted)';
+}
+
+function selectResult(val) {
+  currentResult = val;
+  document.querySelectorAll('[data-result]').forEach(function(el) {
+    el.className = 'rbtn' + (el.dataset.result === val ? ' act-' + val : '');
+  });
+  document.getElementById('sub-輔導改善').classList.toggle('hidden', val !== '輔導改善');
+  document.getElementById('sub-限期改善').classList.toggle('hidden', val !== '限期改善');
+  updateDialogStateSummary();
+  hideScriptDialogForSettingChange();
+}
+
+function toggleMeatOption(val) {
+  currentMeats[val] = !currentMeats[val];
+  syncMeatOptions();
+  updateDialogStateSummary();
+  hideScriptDialogForSettingChange();
+}
+
+function syncMeatOptions() {
+  document.querySelectorAll('#meatGroup [data-meat]').forEach(function(btn) {
+    var on = !!currentMeats[btn.dataset.meat];
+    btn.className = 'rbtn' + (on ? ' act-' + btn.dataset.meat : ' off');
+  });
+}
+
+document.querySelectorAll('.law-item input[type=checkbox]').forEach(function(cb) {
+  cb.addEventListener('change', function() {
+    this.closest('.law-item').classList.toggle('selected', this.checked);
+    hideScriptDialogForSettingChange();
+  });
+});
+
+// ── 每次執行時動態讀取 ────────────────────────────────
+function getConfig(options) {
+  options = options || {};
+  var usePanelResult = !!options.usePanelResult;
+  var useMeat = !!options.useMeat;
+  var project = document.getElementById('projectName').value.trim();
+  var result = usePanelResult ? currentResult : '合格';
+  var lawGroupId = result === '輔導改善' ? 'laws-輔導改善' : 'laws-限期改善';
+  var laws = [];
+  if (usePanelResult && result !== '合格') {
+    document.querySelectorAll('#' + lawGroupId + ' input:checked').forEach(function(cb) {
+      laws.push(cb.value);
+    });
+  }
+  return {
+    project: project,
+    hasProject: !!project,
+    undertaker: document.getElementById('undertaker').value,
+    result: result,
+    meats: {
+      nonRegulated: useMeat && !!currentMeats['非規範對象'],
+      notApplicable: useMeat && !!currentMeats['不適用']
+    },
+    laws: laws,
+    deadline: usePanelResult ? document.getElementById('deadlineDate').value : ''
+  };
+}
+
+// ── 共用函式（動態產生）──────────────────────────────
+function buildCommon(cfg) {
+  return [
+    'var $=window.$;',
+    'var projectName=' + JSON.stringify(cfg.project) + ';',
+    'var hasProjectName=' + JSON.stringify(cfg.hasProject) + ';',
+    'var undertakerVal=' + JSON.stringify(cfg.undertaker) + ';',
+    'var inspectionResult=' + JSON.stringify(cfg.result) + ';',
+    'var meatOptions=' + JSON.stringify(cfg.meats) + ';',
+    'var selectedLaws=' + JSON.stringify(cfg.laws) + ';',
+    'var deadlineDate=' + JSON.stringify(cfg.deadline) + ';',
+    'function sp(id,val){var el=document.getElementById(id);if(!el)return false;if($&&$(el).selectpicker){$(el).selectpicker("val",val);$(el).selectpicker("refresh");}else{el.value=val;el.dispatchEvent(new Event("change",{bubbles:true}));}return true;}',
+    'function chk(id){var el=document.getElementById(id);if(el&&!el.checked)el.click();}',
+    'function clickRadioByVal(name,val){var el=document.querySelector("input[name=\\""+name+"\\"][value=\\""+val+"\\"]");if(el)el.click();}',
+    'function goTab(hash,cb){var tab=document.querySelector("a[href$=\\""+hash+"\\"]");if(tab){tab.click();setTimeout(cb||function(){},600);}else if(cb){cb();}}',
+    'function doProject(menuId,cb){if(!hasProjectName){if(cb)cb();return false;}var lb=document.getElementById(menuId);if(!lb)return false;var opt=Array.from(lb.options).find(function(o){return o.text.trim().includes(projectName);});if(opt){opt.selected=true;var ab=document.getElementById("btnSet");if(ab)ab.click();setTimeout(function(){var co=document.getElementById("btnCommit");if(co){co.click();setTimeout(function(){if(cb)cb();},500);}},400);return true;}if(cb)cb();return false;}',
+    'function doSearch(menuId,cb){if(!hasProjectName){if(cb)cb();return false;}var btn=document.getElementById("btnSearch");if(btn)btn.click();setTimeout(function(){doProject(menuId,cb);},600);return true;}',
+    'function btnVisible(el){return !!(el&&(el.offsetWidth||el.offsetHeight||el.getClientRects().length));}',
+    'function pickSearchBtn(){var b1=document.getElementById("btnSearch");var b2=document.getElementById("btnPjDoSearch");return btnVisible(b1)?b1:(btnVisible(b2)?b2:(b1||b2));}',
+    'function doSearchWait(menuId,cb){if(!hasProjectName){if(cb)cb();return false;}var btn=pickSearchBtn();if(btn)btn.click();var tries=0;var t=setInterval(function(){tries++;var lb=document.getElementById(menuId);if(lb&&lb.options&&lb.options.length>0){clearInterval(t);doProject(menuId,cb);}else if(tries>30){clearInterval(t);console.warn("doSearchWait timeout");if(cb)cb();}},250);return true;}',
+    'function getMenuId(){return document.getElementById("ctl00_ContentPlaceHolder1_projectSearch_lstbMenu")?"ctl00_ContentPlaceHolder1_projectSearch_lstbMenu":"ctl00_ContentPlaceHolder1_lstbMenu";}',
+    // 設定承辦人員（支援多種id）
+    'function selU(ids){ids.forEach(function(id){var el=document.getElementById(id);if(el&&$&&el.options&&el.options.length>1){$(el).selectpicker("val",undertakerVal);$(el).selectpicker("refresh");}});}',
+    // 設定稽查結果（支援多種id）
+    'function setNativeSelect(el,val){if(!el)return false;el.value=val;el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}));if(typeof el.onchange==="function"){try{el.onchange.call(el);}catch(e){console.warn(e);}}if($){$(el).trigger("change");if($(el).selectpicker){$(el).selectpicker("val",val);$(el).selectpicker("refresh");$(el).trigger("changed.bs.select");}}return true;}',
+    'function setResult(ids){ids.forEach(function(id){var el=document.getElementById(id);if(!el)return;var opt=Array.from(el.options||[]).find(function(o){return o.text.trim()===inspectionResult;});if(opt)setNativeSelect(el,opt.value);});}',
+    // 設定稽查階段+承辦人員（輪詢等承辦選項載入）
+    'function setStageAndU(stageId,uId,cb){var s=document.getElementById(stageId);if(s){var opt=Array.from(s.options||[]).find(function(o){return o.text.includes("承辦");});if(opt)setNativeSelect(s,opt.value);}var tries=0;var t=setInterval(function(){tries++;var u=document.getElementById(uId);if(u&&u.options&&u.options.length>1){clearInterval(t);if($&&$(u).selectpicker){$(u).selectpicker("val",undertakerVal);$(u).selectpicker("refresh");}else{u.value=undertakerVal;u.dispatchEvent(new Event("change",{bubbles:true}));}if(cb)setTimeout(cb,200);}else if(tries>40){clearInterval(t);console.warn("setStageAndU timeout:"+uId);if(cb)cb();}},150);}',
+  ].join('\n');
+}
+
+// ── 肉源 ─────────────────────────────────────────────
+function buildMeatSourceCode(cfg) {
+  var lines = [];
+  if (cfg.meats.nonRegulated) {
+    lines.push('chk("ctl00_ContentPlaceHolder1_rblPRODUCT_INSURANCE_1");');
+    lines.push('chk("ctl00_ContentPlaceHolder1_gv_MeatChk_ctl08_chkMeatChk");');
+  }
+  if (cfg.meats.notApplicable) {
+    lines.push('chk("衛生查核不適用");');
+  }
+  return lines.length ? lines.join('\n') : '/* 肉品來源未勾選自動項目 */';
+}
+
+// ── 1. 來源文件保存 ───────────────────────────────────
+function runSource() {
+  var cfg = getConfig();
+  var code = `(function(){
+  var $ = window.$;
+  var projectName = ${JSON.stringify(cfg.project)};
+  var hasProjectName = ${JSON.stringify(cfg.hasProject)};
+  var undertakerVal = ${JSON.stringify(cfg.undertaker)};
+  var inspectionResult = ${JSON.stringify(cfg.result)};
+
+  function setSelectValue(el, val) {
+    if (!el) return false;
+    var ok = Array.from(el.options || []).some(function(o){ return o.value == val; });
+    if (!ok) return false;
+
+    el.value = val;
+    el.dispatchEvent(new Event("input", { bubbles:true }));
+    el.dispatchEvent(new Event("change", { bubbles:true }));
+
+    if ($ && $(el).selectpicker) {
+      $(el).selectpicker("val", val);
+      $(el).selectpicker("refresh");
+      $(el).trigger("changed.bs.select");
+    }
+    return true;
+  }
+
+  function forceSelect(id, val, rounds, gap, cb) {
+    rounds = rounds || 12;
+    gap = gap || 200;
+    var n = 0;
+    var t = setInterval(function(){
+      n++;
+      var el = document.getElementById(id);
+      var ok = el && el.options && el.options.length > 1 && setSelectValue(el, val);
+      if (ok || n >= rounds) {
+        clearInterval(t);
+        if (cb) cb(!!ok);
+      }
+    }, gap);
+  }
+
+  function setResult() {
+    var sel = document.getElementById("ctl00_ContentPlaceHolder1_ddlRES");
+    if (!sel) {
+      console.warn("找不到 ddlRES");
+      return;
+    }
+    var opt = Array.from(sel.options).find(function(o){
+      return o.text.trim() === inspectionResult;
+    });
+    if (opt) setSelectValue(sel, opt.value);
+  }
+
+  function setStageAndHandler(cb) {
+    var s = document.getElementById("ctl00_ContentPlaceHolder1_ddl稽查_作業階段");
+    if (s) {
+      var opt = Array.from(s.options).find(function(o){
+        return o.text.indexOf("承辦") >= 0;
+      });
+      if (opt) setSelectValue(s, opt.value);
+    } else {
+      console.warn("找不到 ddl稽查_作業階段");
+    }
+
+    setTimeout(function(){
+      forceSelect("ctl00_ContentPlaceHolder1_ddl稽查_處理人員", undertakerVal, 16, 220, function(){
+        if (cb) cb();
+      });
+    }, 250);
+  }
+
+  function setSourceYes() {
+    ["op1_y", "op21_y", "op22_y", "op23_y"].forEach(function(id){
+      var el = document.getElementById(id);
+      if (!el) {
+        console.warn("not found", id);
+        return;
+      }
+      if (!el.checked) el.click();
+      el.checked = true;
+      el.dispatchEvent(new Event("input", { bubbles:true }));
+      el.dispatchEvent(new Event("change", { bubbles:true }));
+    });
+  }
+
+  function tab(hash, wait, cb) {
+    var a = document.querySelector('a[href$="' + hash + '"]');
+    if (a) a.click();
+    setTimeout(cb || function(){}, wait || 400);
+  }
+
+  function getMenuId() {
+    if (document.getElementById("ctl00_ContentPlaceHolder1_projectSearch_lstbMenu")) {
+      return "ctl00_ContentPlaceHolder1_projectSearch_lstbMenu";
+    }
+    return "ctl00_ContentPlaceHolder1_lstbMenu";
+  }
+
+  function doProject(menuId, cb) {
+    var lb = document.getElementById(menuId);
+    if (!lb) {
+      console.warn("找不到專案清單", menuId);
+      if (cb) cb();
+      return;
+    }
+
+    var opt = Array.from(lb.options).find(function(o){
+      return o.text.trim().indexOf(projectName) >= 0;
+    });
+
+    if (!opt) {
+      console.warn("找不到專案", projectName);
+      if (cb) cb();
+      return;
+    }
+
+    opt.selected = true;
+    lb.dispatchEvent(new Event("change", { bubbles:true }));
+
+    var setBtn = document.getElementById("btnSet");
+    if (setBtn) setBtn.click();
+
+    setTimeout(function(){
+      var commitBtn = document.getElementById("btnCommit");
+      if (commitBtn) commitBtn.click();
+
+      setTimeout(function(){
+        if (cb) cb();
+      }, 700);
+    }, 450);
+  }
+
+  function doSearchWait(cb) {
+    if (!hasProjectName) {
+      if (cb) cb();
+      return;
+    }
+
+    var btn = document.getElementById("btnSearch") || document.getElementById("btnPjDoSearch");
+    if (btn) btn.click();
+
+    var menuId = getMenuId();
+    var tries = 0;
+    var t = setInterval(function(){
+      tries++;
+      var lb = document.getElementById(menuId);
+      if (lb && lb.options.length > 0) {
+        clearInterval(t);
+        doProject(menuId, cb);
+      } else if (tries >= 30) {
+        clearInterval(t);
+        console.warn("專案清單逾時，繼續後續流程");
+        if (cb) cb();
+      }
+    }, 250);
+  }
+
+  if (!document.getElementById("op1_y") && !document.getElementById("ctl00_ContentPlaceHolder1_ddl稽查_作業階段")) {
+    alert("找不到來源文件保存頁面元素");
+    return;
+  }
+
+  tab("#tabs2", 350, function(){
+    doSearchWait(function(){
+      tab("#tabs1", 300, function(){
+        setSourceYes();
+
+        tab("#tabs3", 350, function(){
+          setResult();
+          setStageAndHandler(function(){
+            console.log("來源文件保存完成");
+          });
+        });
+      });
+    });
+  });
+})()`;
+
+  showScript(code, '來源文件保存', 'source');
+}
+
+// ── 2. GHP ────────────────────────────────────────────
+function runGHP() {
+  var cfg = getConfig({ usePanelResult: true, useMeat: true });
+  var mc = buildMeatSourceCode(cfg);
+  var code = '(function(){\n' + buildCommon(cfg) + '\n' +
+    'if(document.getElementById("ctl00_ContentPlaceHolder1_ddlstep")){\n' +
+    '  goTab("#tab8",function(){\n' +
+    '    setTimeout(function(){\n' +
+    mc + '\n' +
+    '      doSearchWait(getMenuId(),function(){\n' +
+    '        goTab("#tab3",function(){\n' +
+    '          setTimeout(function(){\n' +
+    mc + '\n' +
+    '            setResult(["ctl00_ContentPlaceHolder1_ddlRES"]);\n' +
+    '            function setGhpStageAndReceiver(){\n' +
+    '              var s=document.getElementById("ctl00_ContentPlaceHolder1_ddlstep");\n' +
+    '              if(s){setNativeSelect(s,"1");}\n' +
+    '              var ghpTries=0;\n' +
+    '              var ghpT=setInterval(function(){\n' +
+    '                ghpTries++;\n' +
+    '                var isSystemBusy=false;\n' +
+    '                if(window.Sys&&Sys.WebForms&&Sys.WebForms.PageRequestManager){\n' +
+    '                  try{isSystemBusy=Sys.WebForms.PageRequestManager.getInstance().get_isInAsyncPostBack();}catch(e){isSystemBusy=false;}\n' +
+    '                }\n' +
+    '                var u=document.getElementById("ctl00_ContentPlaceHolder1_ddlreceivepeople");\n' +
+    '                if(u&&u.options&&u.options.length>1&&!isSystemBusy){\n' +
+    '                  setTimeout(function(){\n' +
+    '                    var busyAgain=false;\n' +
+    '                    if(window.Sys&&Sys.WebForms&&Sys.WebForms.PageRequestManager){\n' +
+    '                      try{busyAgain=Sys.WebForms.PageRequestManager.getInstance().get_isInAsyncPostBack();}catch(e){busyAgain=false;}\n' +
+    '                    }\n' +
+    '                    if(busyAgain)return;\n' +
+    '                    clearInterval(ghpT);\n' +
+    '                    u=document.getElementById("ctl00_ContentPlaceHolder1_ddlreceivepeople");\n' +
+    '                    if(!u)return;\n' +
+    '                    console.log("🎯 [防蓋台成功] 系統 AJAX 已落地且停止忙碌，開始填入承辦人...");\n' +
+    '                    if($&&$(u).selectpicker){\n' +
+    '                      $(u).selectpicker("val",undertakerVal);\n' +
+    '                      $(u).selectpicker("refresh");\n' +
+    '                      $(u).trigger("changed.bs.select");\n' +
+    '                    }else{\n' +
+    '                      u.value=undertakerVal;\n' +
+    '                      u.dispatchEvent(new Event("input",{bubbles:true}));\n' +
+    '                      u.dispatchEvent(new Event("change",{bubbles:true}));\n' +
+    '                    }\n' +
+    '                  },200);\n' +
+    '                }else if(ghpTries>40){\n' +
+    '                  clearInterval(ghpT);\n' +
+    '                  console.warn("❌ [逾時] 等不到系統 AJAX 穩定");\n' +
+    '                }\n' +
+    '              },300);\n' +
+    '            }\n' +
+    // GHP 預覽/流程分頁會重新渲染欄位；先切到 tab4，再等 ASP.NET AJAX 完全停止後補選承辦員
+    '            goTab("#tab4",function(){setGhpStageAndReceiver();});\n' +
+    '          },600);\n' +
+    '        });\n' +
+    '      });\n' +
+    '    },300);\n' +
+    '  });\n' +
+    '} else { alert("找不到GHP頁面元素"); }\n' +
+    '})()';
+  showScript(code, 'GHP', 'ghp');
+}
+
+// ── 3. 逾期食品 ───────────────────────────────────────
+function runExpired() {
+  var cfg = getConfig();
+  var code = '(function(){\n' + buildCommon(cfg) + '\n' +
+    'if(document.getElementById("ctl00_ContentPlaceHolder1_ddl稽查_作業階段")){\n' +
+    // 稽查內容：選無
+    '  chk("op1_n");\n' +
+    // 專案欄位
+    '  goTab("#tabs2",function(){\n' +
+    '    doSearch(getMenuId(),function(){\n' +
+    // 稽查結果
+    '      goTab("#tabs3",function(){\n' +
+    '        setResult(["ctl00_ContentPlaceHolder1_ddlRES"]);\n' +
+    // 承辦
+    '        setStageAndU("ctl00_ContentPlaceHolder1_ddl稽查_作業階段","ctl00_ContentPlaceHolder1_ddl稽查_處理人員");\n' +
+    '      });\n' +
+    '    });\n' +
+    '  });\n' +
+    '} else { alert("找不到逾期食品頁面元素"); }\n' +
+    '})()';
+  showScript(code, '逾期食品稽查', 'expired');
+}
+
+// ── 4. 登錄查核 ───────────────────────────────────────
+function runReg() {
+  var cfg = getConfig();
+  var code = '(function(){\n' + buildCommon(cfg) + '\n' +
+    'if(document.getElementById("ctl00_ContentPlaceHolder1_ddlStatus")){\n' +
+    '  goTab("#tab2",function(){\n' +
+    '    var s=document.getElementById("ctl00_ContentPlaceHolder1_ddlStatus");\n' +
+    '    if(s){s.value="1";s.dispatchEvent(new Event("change",{bubbles:true}));}\n' +
+    '    setTimeout(function(){\n' +
+    '      selU(["ctl00_ContentPlaceHolder1_ddlUndertake"]);\n' +
+    // 稽查結果（登錄查核有多個）
+    '      setResult(["ctl00_ContentPlaceHolder1_ddlmf0101_RES","ctl00_ContentPlaceHolder1_ddlmf0102_RES","ctl00_ContentPlaceHolder1_ddlim0201_RES","ctl00_ContentPlaceHolder1_ddlca0301_RES","ctl00_ContentPlaceHolder1_ddlca0302_RES","ctl00_ContentPlaceHolder1_ddlsa0401_RES","ctl00_ContentPlaceHolder1_ddlsa0403_RES","ctl00_ContentPlaceHolder1_ddl物流業0501_RES","ctl00_ContentPlaceHolder1_ddl物流業0502_RES","ctl00_ContentPlaceHolder1_ddlRES"]);\n' +
+    '      goTab("#tab8",function(){ doSearch(getMenuId()); });\n' +
+    '    },300);\n' +
+    '  });\n' +
+    '} else { alert("找不到登錄查核頁面元素"); }\n' +
+    '})()';
+  showScript(code, '登錄查核', 'reg');
+}
+
+// ── 5. 產品責任保險 ───────────────────────────────────
+function runInsurance() {
+  var cfg = getConfig();
+
+  var code = '(function(){\n' + buildCommon(cfg) + '\n' +
+    'if(document.getElementById("ctl00_ContentPlaceHolder1_ddl稽查_作業階段")){\n' +
+    '  doSearchWait(getMenuId(),function(){\n' +
+    '    var resultValMap={"合格":"1","輔導改善":"1","限期改善":"1"};\n' +
+    '    var rval=resultValMap[inspectionResult]||"1";\n' +
+    '    clickRadioByVal("ctl00$ContentPlaceHolder1$rbl本次稽查結果",rval);\n' +
+    '    setStageAndU("ctl00_ContentPlaceHolder1_ddl稽查_作業階段","ctl00_ContentPlaceHolder1_ddl稽查_處理人員");\n' +
+    '  });\n' +
+    '} else { alert("找不到產品責任保險頁面元素"); }\n' +
+    '})()';
+
+  showScript(code, '產品責任保險', 'insurance');
+}
+
+// ── 6. 標示抽驗（GoodRec.aspx）───────────────────────
+function runLabel() {
+  var cfg = getConfig();
+
+  var code = '(function(){\n' + buildCommon(cfg) + '\n' +
+    // 標示抽驗專案：保留專案流程，但不恢復產品別分類/物品標示
+    'function getLabelMenuId(){var ids=["ctl00_ContentPlaceHolder1_ucProjectSearch_lstbMenu","ctl00_ContentPlaceHolder1_projectSearch_lstbMenu","ctl00_ContentPlaceHolder1_lstbMenu"];for(var i=0;i<ids.length;i++){if(document.getElementById(ids[i]))return ids[i];}return ids[0];}\n' +
+    'function doLabelProject(cb){if(!hasProjectName){if(cb)cb();return false;}var btn=pickSearchBtn?pickSearchBtn():(document.getElementById("btnPjDoSearch")||document.getElementById("btnSearch"));if(btn)btn.click();var tries=0;var t=setInterval(function(){tries++;var menuId=getLabelMenuId();var lb=document.getElementById(menuId);if(lb&&lb.options&&lb.options.length>0){clearInterval(t);doProject(menuId,cb);}else if(tries>30){clearInterval(t);console.warn("doLabelProject timeout");if(cb)cb();}},250);return true;}\n' +
+    'if(document.getElementById("ctl00_ContentPlaceHolder1_ddl稽查販售通路")){\n' +
+    // 先跑專案，避免後續欄位被專案流程刷新
+    '  doLabelProject(function(){\n' +
+    // 販售通路
+    '    sp("ctl00_ContentPlaceHolder1_ddl稽查販售通路","01");\n' +
+    '    chk("ctl00_ContentPlaceHolder1_chk販售通路_實體門市");\n' +
+
+    // 稽查註記
+    '    chk("ctl00_ContentPlaceHolder1_chkType2");\n' +
+
+    // 同稽查業者
+    '    chk("ctl00_ContentPlaceHolder1_chkItSelf1");\n' +
+
+    // 食品地區別：用接近手動選取的方式觸發 change，讓原廠產自動帶入
+    '    function spManual(id,val,cb){var el=document.getElementById(id);if(!el){if(cb)cb(false);return false;}var before=el.value;if($&&$(el).selectpicker){$(el).selectpicker("val",val);}el.value=val;el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}));if(typeof el.onchange==="function"){try{el.onchange.call(el);}catch(e){console.warn(e);}}if($){$(el).trigger("change");if($(el).selectpicker){$(el).selectpicker("refresh");$(el).trigger("changed.bs.select");}}setTimeout(function(){if(cb)cb(el.value===val||before!==el.value);},500);return true;}\n' +
+    '    spManual("ctl00_ContentPlaceHolder1_cboFOOD_TYPE","01");\n' +
+    '  });\n' +
+
+    '} else { alert("找不到標示抽驗頁面元素"); }\n' +
+    '})()';
+
+  showScript(code, '標示抽驗', 'label');
+}
+
+// ── Dialog ────────────────────────────────────────────
+function getSelectedOptionText(selectId) {
+  var el = document.getElementById(selectId);
+  if (!el || !el.options || el.selectedIndex < 0) return '';
+  return el.options[el.selectedIndex].text.trim();
+}
+
+function getDialogStateText(activeLogId) {
+  var undertakerName = getSelectedOptionText('undertaker') || '未選承辦';
+  var project = document.getElementById('projectName').value.trim();
+  var projectState = project || '無專案';
+  var resultState = activeLogId === 'ghp' ? currentResult : '合格';
+  var extra = '';
+  if (activeLogId === 'ghp') {
+    var meats = [];
+    if (currentMeats['非規範對象']) meats.push('非規範');
+    if (currentMeats['不適用']) meats.push('不適用');
+    if (meats.length) extra = ' ｜ 肉品：' + meats.join('+');
+  }
+  return '承辦：' + undertakerName + ' ｜ ' + projectState + ' ｜ 結果：' + resultState + extra;
+}
+
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, function(ch) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+  });
+}
+
+function updateDialogStateSummary(activeLogId) {
+  var summary = document.getElementById('execStateSummary');
+  if (!summary) return;
+  activeLogId = activeLogId || summary.dataset.activeLogId || '';
+  summary.dataset.activeLogId = activeLogId;
+  var undertakerName = getSelectedOptionText('undertaker') || '未選承辦';
+  var project = document.getElementById('projectName').value.trim() || '無專案';
+  var resultState = activeLogId === 'ghp' ? currentResult : '合格';
+  var meats = [];
+  if (activeLogId === 'ghp') {
+    if (currentMeats['非規範對象']) meats.push('非規範');
+    if (currentMeats['不適用']) meats.push('不適用');
+  }
+  var fullText = getDialogStateText(activeLogId);
+  var meatText = meats.length ? ' ｜ 肉品：' + meats.join('+') : '';
+  summary.title = fullText;
+  summary.innerHTML =
+    '<span class="state-part">承辦：' + escapeHtml(undertakerName) + '</span>' +
+    '<span class="state-part">｜</span>' +
+    '<span class="state-project" title="' + escapeHtml(project) + '">' + escapeHtml(project) + '</span>' +
+    '<span class="state-part">｜ 結果：' + escapeHtml(resultState + meatText) + '</span>';
+}
+
+function updateProjectHint() {
+  var project = document.getElementById('projectName').value.trim();
+  var input = document.getElementById('projectName');
+  if (!input) return;
+  input.placeholder = project ? '若有專案請填入完整專案名稱' : '目前未填專案，產出腳本時會自動略過專案套用';
+}
+
+function showScript(code, scriptName, activeLogId) {
+  var plain = 'javascript:' + code;
+  document.getElementById('execCode').value = plain;
+  document.getElementById('execTitle').textContent = '📋 當前：' + (scriptName || '書籤') + '腳本';
+  updateDialogStateSummary(activeLogId);
+  var d = document.getElementById('execDialog');
+  var userAdjusted = d.dataset.userSized === '1' || d.dataset.userPlaced === '1';
+  d.classList.remove('hidden');
+  if (!userAdjusted) {
+    d.classList.remove('pinned-left');
+    d.classList.add('pinned-right');
+    d.style.top = '88px';
+  }
+  document.getElementById('execStatus').textContent = '書籤腳本已產出，請按複製。';
+  document.getElementById('execStatus').style.color = 'var(--text-muted)';
+  if (activeLogId) {
+    resetLogsExcept(activeLogId);
+    setLog(activeLogId, '書籤腳本已產出', 'ok');
+    setActiveScriptButton(activeLogId);
+  }
+  ensureDialogVisible();
+  setupDialogResize();
+  setupDialogDrag();
+  if (!userAdjusted) {
+    requestAnimationFrame(function() {
+      placeDialogRight();
+    });
+  }
+  if (navigator.clipboard) navigator.clipboard.writeText(plain).catch(function(){});
+}
+
+function copyScript() {
+  var textarea = document.getElementById('execCode');
+  var text = textarea.value;
+  var status = document.getElementById('execStatus');
+  // 先嘗試 execCommand（同步，最相容）
+  textarea.removeAttribute('readonly');
+  textarea.focus();
+  textarea.select();
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) {}
+  textarea.setAttribute('readonly','readonly');
+  if (ok) {
+    status.textContent = '✅ 已複製，請新增書籤後，把網址改成這段腳本。';
+    status.style.color = 'var(--green)';
+    return;
+  }
+  // fallback: clipboard API
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(function() {
+      status.textContent = '✅ 已複製，請新增書籤後，把網址改成這段腳本。';
+      status.style.color = 'var(--green)';
+    }).catch(function() {
+      status.textContent = '⚠️ 自動複製失敗，請手動全選後按 Ctrl+C。';
+      status.style.color = 'var(--red)';
+      selectScript();
+    });
+  }
+}
+
+function selectScript() {
+  var textarea = document.getElementById('execCode');
+  textarea.focus();
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+  document.getElementById('execStatus').textContent = '已全選，請按 Ctrl+C。';
+}
+
+
+function setupDialogDrag() {
+  var d = document.getElementById('execDialog');
+  var bar = document.getElementById('execDragbar');
+  if (!d || !bar || d.dataset.dragReady === '1') return;
+  d.dataset.dragReady = '1';
+
+  bar.addEventListener('mousedown', function(ev) {
+    if (ev.target.closest('button, textarea, input')) return;
+    ev.preventDefault();
+    var rect = d.getBoundingClientRect();
+    var offsetX = ev.clientX - rect.left;
+    var offsetY = ev.clientY - rect.top;
+
+      function onMove(moveEv) {
+        var bounds = getDialogBounds(d);
+        var nextLeft = Math.max(8, Math.min(bounds.maxLeft, moveEv.clientX - offsetX));
+        var nextTop = Math.max(8, Math.min(bounds.maxTop, moveEv.clientY - offsetY));
+        d.style.left = nextLeft + 'px';
+        d.style.top = nextTop + 'px';
+        d.style.right = 'auto';
+        d.style.bottom = 'auto';
+        d.classList.remove('pinned-right');
+        d.classList.add('pinned-left');
+        d.dataset.userPlaced = '1';
+      }
+
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+}
+
+function setupDialogResize() {
+  var d = document.getElementById('execDialog');
+  if (!d || d.dataset.resizeReady === '1') return;
+  d.dataset.resizeReady = '1';
+
+  d.querySelectorAll('[data-resize-dir]').forEach(function(handle) {
+    handle.addEventListener('mousedown', function(ev) {
+      ev.preventDefault();
+      d.dataset.userSized = '1';
+      var dir = handle.dataset.resizeDir;
+      var startX = ev.clientX;
+      var startY = ev.clientY;
+      var rect = d.getBoundingClientRect();
+      var startWidth = rect.width;
+      var startHeight = rect.height;
+      var startLeft = rect.left;
+      var startTop = rect.top;
+
+      function onMove(moveEv) {
+        var dx = moveEv.clientX - startX;
+        var dy = moveEv.clientY - startY;
+        if (dir.indexOf('left') !== -1) {
+          var nextWidth = Math.max(280, startWidth - dx);
+          d.style.width = nextWidth + 'px';
+          d.style.left = (startLeft + startWidth - nextWidth) + 'px';
+          d.style.right = 'auto';
+        }
+        if (dir.indexOf('right') !== -1) {
+          var nextWidthR = Math.max(280, startWidth + dx);
+          d.style.width = nextWidthR + 'px';
+        }
+        if (dir.indexOf('top') !== -1) {
+          var nextHeight = Math.max(180, startHeight - dy);
+          d.style.height = nextHeight + 'px';
+          d.style.top = (startTop + startHeight - nextHeight) + 'px';
+          d.style.bottom = 'auto';
+        }
+        if (dir.indexOf('bottom') !== -1) {
+          var nextHeightB = Math.max(180, startHeight + dy);
+          d.style.height = nextHeightB + 'px';
+        }
+        keepDialogInView(d);
+      }
+
+      function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
+}
+
+function getDialogBounds(d) {
+  var rect = d.getBoundingClientRect();
+  return {
+    maxLeft: Math.max(8, window.innerWidth - rect.width - 8),
+    maxTop: Math.max(8, window.innerHeight - rect.height - 8)
+  };
+}
+
+function placeDialogRight() {
+  var d = document.getElementById('execDialog');
+  if (!d) return;
+  var rect = d.getBoundingClientRect();
+  var width = rect.width || d.offsetWidth || 360;
+  var nextLeft = Math.max(8, window.innerWidth - width - 20);
+  d.style.left = nextLeft + 'px';
+  d.style.right = 'auto';
+  d.style.bottom = 'auto';
+  d.classList.remove('pinned-left');
+  d.classList.add('pinned-right');
+}
+
+function keepDialogInView(d) {
+  if (d.classList.contains('pinned-right')) {
+    placeDialogRight();
+    d.style.bottom = 'auto';
+    return;
+  }
+  var rect = d.getBoundingClientRect();
+  var maxLeft = Math.max(8, window.innerWidth - rect.width - 8);
+  var maxTop = Math.max(8, window.innerHeight - rect.height - 8);
+  var nextLeft = Math.min(Math.max(8, rect.left), maxLeft);
+  var nextTop = Math.min(Math.max(8, rect.top), maxTop);
+  if (nextLeft !== rect.left) d.style.left = nextLeft + 'px';
+  if (nextTop !== rect.top) d.style.top = nextTop + 'px';
+  d.style.right = 'auto';
+  d.style.bottom = 'auto';
+}
+
+function setActiveScriptButton(activeId) {
+  document.querySelectorAll('.item-card').forEach(function(card) {
+    card.classList.remove('active');
+  });
+  var current = document.getElementById('card-' + activeId);
+  if (current) {
+    current.classList.add('active');
+  }
+}
+
+function ensureDialogVisible() {
+  var d = document.getElementById('execDialog');
+  if (!d) return;
+  var vw = window.innerWidth;
+  var vh = window.innerHeight;
+  var userAdjusted = d.dataset.userSized === '1' || d.dataset.userPlaced === '1';
+  var targetWidth = Math.min(380, Math.max(280, Math.floor(vw * 0.30)));
+  var targetHeight = Math.min(360, Math.max(320, Math.floor(vh * 0.30)));
+  if (!userAdjusted) {
+    d.style.width = targetWidth + 'px';
+    d.style.height = targetHeight + 'px';
+  }
+  if (!userAdjusted) {
+    d.style.top = Math.max(72, Math.floor((vh - targetHeight) / 2)) + 'px';
+    if (vh < targetHeight + 120) {
+      d.style.top = '72px';
+    }
+  }
+  fitDialogToViewport(d);
+  if (d.classList.contains('pinned-right')) {
+    placeDialogRight();
+  } else {
+    keepDialogInView(d);
+  }
+}
+
+function fitDialogToViewport(d) {
+  if (!d) return;
+  var vw = window.innerWidth;
+  var vh = window.innerHeight;
+  var maxWidth = Math.max(260, vw - 24);
+  var maxHeight = Math.max(240, vh - 96);
+  var rect = d.getBoundingClientRect();
+  if (rect.width > maxWidth) d.style.width = maxWidth + 'px';
+  if (rect.height > maxHeight) d.style.height = maxHeight + 'px';
+}
+
+function resetLogsExcept(activeId) {
+  ['source','ghp','expired','reg','insurance','label'].forEach(function(id) {
+    if (id === activeId) return;
+    setLog(id, '待產出', 'gray');
+    var card = document.getElementById('card-' + id);
+    if (card) card.classList.remove('active');
+  });
+}
+
+function setLog(id, msg, type) {
+  var el = document.getElementById('log-' + id);
+  var dot = type === 'ok' ? 'd-green' : 'd-gray';
+  el.innerHTML = '<span class="sdot ' + dot + '"></span>' + msg;
+}
+
+window.addEventListener('resize', function() {
+  var d = document.getElementById('execDialog');
+  if (!d || d.classList.contains('hidden')) return;
+  fitDialogToViewport(d);
+  keepDialogInView(d);
+});
+
+['projectName', 'undertaker'].forEach(function(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', function() { updateProjectHint(); updateDialogStateSummary(); hideScriptDialogForSettingChange(); });
+  el.addEventListener('change', function() { updateProjectHint(); updateDialogStateSummary(); hideScriptDialogForSettingChange(); });
+});
+var deadlineInput = document.getElementById('deadlineDate');
+if (deadlineInput) {
+  deadlineInput.addEventListener('input', hideScriptDialogForSettingChange);
+  deadlineInput.addEventListener('change', hideScriptDialogForSettingChange);
+}
+updateProjectHint();
+</script>
+</body>
+</html>
