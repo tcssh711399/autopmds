@@ -410,22 +410,58 @@ function runSource() {
     if (opt) setSelectValue(sel, opt.value);
   }
 
+  function isAjaxBusy() {
+    if (!(window.Sys && Sys.WebForms && Sys.WebForms.PageRequestManager)) {
+      return false;
+    }
+    try {
+      return Sys.WebForms.PageRequestManager.getInstance().get_isInAsyncPostBack();
+    } catch (e) {
+      return false;
+    }
+  }
+
   function setStageAndHandler(cb) {
     var s = document.getElementById("ctl00_ContentPlaceHolder1_ddl稽查_作業階段");
+    var stageVal = "";
     if (s) {
       var opt = Array.from(s.options).find(function(o){
         return o.text.indexOf("承辦") >= 0;
       });
-      if (opt) setSelectValue(s, opt.value);
+      if (opt) {
+        stageVal = opt.value;
+        setSelectValue(s, stageVal);
+      }
     } else {
       console.warn("找不到 ddl稽查_作業階段");
     }
 
-    setTimeout(function(){
-      forceSelect("ctl00_ContentPlaceHolder1_ddl稽查_處理人員", undertakerVal, 16, 220, function(){
+    var tries = 0;
+    var t = setInterval(function(){
+      tries++;
+      var u = document.getElementById("ctl00_ContentPlaceHolder1_ddl稽查_處理人員");
+      if (u && u.options && u.options.length > 1 && !isAjaxBusy()) {
+        setTimeout(function(){
+          if (isAjaxBusy()) return;
+          s = document.getElementById("ctl00_ContentPlaceHolder1_ddl稽查_作業階段");
+          u = document.getElementById("ctl00_ContentPlaceHolder1_ddl稽查_處理人員");
+          if (!u || !u.options || u.options.length <= 1) return;
+          if (s && stageVal && s.value !== stageVal) {
+            setSelectValue(s, stageVal);
+            return;
+          }
+          if (setSelectValue(u, undertakerVal)) {
+            clearInterval(t);
+            console.log("🎯 [防蓋台成功] 來源文件保存 AJAX 已穩定，開始填入承辦人...");
+            if (cb) setTimeout(cb, 200);
+          }
+        }, 200);
+      } else if (tries > 40) {
+        clearInterval(t);
+        console.warn("❌ [逾時] 來源文件保存等不到系統 AJAX 穩定");
         if (cb) cb();
-      });
-    }, 250);
+      }
+    }, 300);
   }
 
   function setSourceYes() {
