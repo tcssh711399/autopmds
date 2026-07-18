@@ -323,10 +323,13 @@ function buildCommon(cfg) {
     'var meatOptions=' + JSON.stringify(cfg.meats) + ';',
     'var selectedLaws=' + JSON.stringify(cfg.laws) + ';',
     'var deadlineDate=' + JSON.stringify(cfg.deadline) + ';',
-    'function sp(id,val){var el=document.getElementById(id);if(!el)return false;if($&&$(el).selectpicker){$(el).selectpicker("val",val);$(el).selectpicker("refresh");}else{el.value=val;el.dispatchEvent(new Event("change",{bubbles:true}));}return true;}',
+    'function setNativeSelect(el,val){if(!el)return false;el.value=val;el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}));if(typeof el.onchange==="function"){try{el.onchange.call(el);}catch(e){console.warn(e);}}if($){$(el).trigger("change");if($(el).selectpicker){$(el).selectpicker("val",val);$(el).selectpicker("refresh");$(el).trigger("changed.bs.select");}}return true;}',
+    'function sp(id,val){return setNativeSelect(document.getElementById(id),val);}',
     'function chk(id){var el=document.getElementById(id);if(el&&!el.checked)el.click();}',
+    'function chks(ids){ids.forEach(function(id){chk(id);var el=document.getElementById(id);if(el){el.checked=true;el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}));}});}',
     'function clickRadioByVal(name,val){var el=document.querySelector("input[name=\\""+name+"\\"][value=\\""+val+"\\"]");if(el)el.click();}',
-    'function goTab(hash,cb){var tab=document.querySelector("a[href$=\\""+hash+"\\"]");if(tab){tab.click();setTimeout(cb||function(){},600);}else if(cb){cb();}}',
+    'function goTabWait(hash,wait,cb){var tab=document.querySelector("a[href$=\\""+hash+"\\"]");if(tab)tab.click();setTimeout(cb||function(){},wait||600);}',
+    'function goTab(hash,cb){goTabWait(hash,600,cb);}',
     'function doProject(menuId,cb){if(!hasProjectName){if(cb)cb();return false;}var lb=document.getElementById(menuId);if(!lb)return false;var opt=Array.from(lb.options).find(function(o){return o.text.trim().includes(projectName);});if(opt){opt.selected=true;var ab=document.getElementById("btnSet");if(ab)ab.click();setTimeout(function(){var co=document.getElementById("btnCommit");if(co){co.click();setTimeout(function(){if(cb)cb();},500);}},400);return true;}if(cb)cb();return false;}',
     'function doSearch(menuId,cb){if(!hasProjectName){if(cb)cb();return false;}var btn=document.getElementById("btnSearch");if(btn)btn.click();setTimeout(function(){doProject(menuId,cb);},600);return true;}',
     'function btnVisible(el){return !!(el&&(el.offsetWidth||el.offsetHeight||el.getClientRects().length));}',
@@ -334,12 +337,12 @@ function buildCommon(cfg) {
     'function doSearchWait(menuId,cb){if(!hasProjectName){if(cb)cb();return false;}var btn=pickSearchBtn();if(btn)btn.click();var tries=0;var t=setInterval(function(){tries++;var lb=document.getElementById(menuId);if(lb&&lb.options&&lb.options.length>0){clearInterval(t);doProject(menuId,cb);}else if(tries>30){clearInterval(t);console.warn("doSearchWait timeout");if(cb)cb();}},250);return true;}',
     'function getMenuId(){return document.getElementById("ctl00_ContentPlaceHolder1_projectSearch_lstbMenu")?"ctl00_ContentPlaceHolder1_projectSearch_lstbMenu":"ctl00_ContentPlaceHolder1_lstbMenu";}',
     // 設定承辦人員（支援多種id）
-    'function selU(ids){ids.forEach(function(id){var el=document.getElementById(id);if(el&&$&&el.options&&el.options.length>1){$(el).selectpicker("val",undertakerVal);$(el).selectpicker("refresh");}});}',
+    'function selU(ids){ids.forEach(function(id){var el=document.getElementById(id);if(el&&el.options&&el.options.length>1)setNativeSelect(el,undertakerVal);});}',
     // 設定稽查結果（支援多種id）
-    'function setNativeSelect(el,val){if(!el)return false;el.value=val;el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}));if(typeof el.onchange==="function"){try{el.onchange.call(el);}catch(e){console.warn(e);}}if($){$(el).trigger("change");if($(el).selectpicker){$(el).selectpicker("val",val);$(el).selectpicker("refresh");$(el).trigger("changed.bs.select");}}return true;}',
     'function setResult(ids){ids.forEach(function(id){var el=document.getElementById(id);if(!el)return;var opt=Array.from(el.options||[]).find(function(o){return o.text.trim()===inspectionResult;});if(opt)setNativeSelect(el,opt.value);});}',
+    'function busy(){if(!(window.Sys&&Sys.WebForms&&Sys.WebForms.PageRequestManager))return false;try{return Sys.WebForms.PageRequestManager.getInstance().get_isInAsyncPostBack();}catch(e){return false;}}',
     // 設定稽查階段+承辦人員（輪詢等承辦選項載入）
-    'function setStageAndU(stageId,uId,cb){var s=document.getElementById(stageId);if(s){var opt=Array.from(s.options||[]).find(function(o){return o.text.includes("承辦");});if(opt)setNativeSelect(s,opt.value);}var tries=0;var t=setInterval(function(){tries++;var u=document.getElementById(uId);if(u&&u.options&&u.options.length>1){clearInterval(t);if($&&$(u).selectpicker){$(u).selectpicker("val",undertakerVal);$(u).selectpicker("refresh");}else{u.value=undertakerVal;u.dispatchEvent(new Event("change",{bubbles:true}));}if(cb)setTimeout(cb,200);}else if(tries>40){clearInterval(t);console.warn("setStageAndU timeout:"+uId);if(cb)cb();}},150);}',
+    'function setStageAndU(stageId,uId,cb,opt){opt=opt||{};var s=document.getElementById(stageId),sv=opt.stageVal||"";if(s&&!sv){var o=Array.from(s.options||[]).find(function(o){return o.text.indexOf(opt.stageText||"承辦")>=0;});if(o)sv=o.value;}if(s&&sv)setNativeSelect(s,sv);var tries=0,gap=opt.ajax?300:150,t=setInterval(function(){tries++;var u=document.getElementById(uId);if(u&&u.options&&u.options.length>1&&(!opt.ajax||!busy())){var done=function(){if(opt.ajax&&busy())return;s=document.getElementById(stageId);u=document.getElementById(uId);if(!u||!u.options||u.options.length<=1)return;if(s&&sv&&s.value!==sv){setNativeSelect(s,sv);return;}clearInterval(t);setNativeSelect(u,undertakerVal);if(opt.log)console.log(opt.log);if(cb)setTimeout(cb,200);};opt.ajax?setTimeout(done,200):done();}else if(tries>40){clearInterval(t);console.warn(opt.timeoutLog||("setStageAndU timeout:"+uId));if(cb)cb();}},gap);}',
   ].join('\n');
 }
 
@@ -359,217 +362,20 @@ function buildMeatSourceCode(cfg) {
 // ── 1. 來源文件保存 ───────────────────────────────────
 function runSource() {
   var cfg = getConfig();
-  var code = `(function(){
-  var $ = window.$;
-  var projectName = ${JSON.stringify(cfg.project)};
-  var hasProjectName = ${JSON.stringify(cfg.hasProject)};
-  var undertakerVal = ${JSON.stringify(cfg.undertaker)};
-  var inspectionResult = ${JSON.stringify(cfg.result)};
-
-  function setSelectValue(el, val) {
-    if (!el) return false;
-    var ok = Array.from(el.options || []).some(function(o){ return o.value == val; });
-    if (!ok) return false;
-
-    el.value = val;
-    el.dispatchEvent(new Event("input", { bubbles:true }));
-    el.dispatchEvent(new Event("change", { bubbles:true }));
-
-    if ($ && $(el).selectpicker) {
-      $(el).selectpicker("val", val);
-      $(el).selectpicker("refresh");
-      $(el).trigger("changed.bs.select");
-    }
-    return true;
-  }
-
-  function forceSelect(id, val, rounds, gap, cb) {
-    rounds = rounds || 12;
-    gap = gap || 200;
-    var n = 0;
-    var t = setInterval(function(){
-      n++;
-      var el = document.getElementById(id);
-      var ok = el && el.options && el.options.length > 1 && setSelectValue(el, val);
-      if (ok || n >= rounds) {
-        clearInterval(t);
-        if (cb) cb(!!ok);
-      }
-    }, gap);
-  }
-
-  function setResult() {
-    var sel = document.getElementById("ctl00_ContentPlaceHolder1_ddlRES");
-    if (!sel) {
-      console.warn("找不到 ddlRES");
-      return;
-    }
-    var opt = Array.from(sel.options).find(function(o){
-      return o.text.trim() === inspectionResult;
-    });
-    if (opt) setSelectValue(sel, opt.value);
-  }
-
-  function isAjaxBusy() {
-    if (!(window.Sys && Sys.WebForms && Sys.WebForms.PageRequestManager)) {
-      return false;
-    }
-    try {
-      return Sys.WebForms.PageRequestManager.getInstance().get_isInAsyncPostBack();
-    } catch (e) {
-      return false;
-    }
-  }
-
-  function setStageAndHandler(cb) {
-    var s = document.getElementById("ctl00_ContentPlaceHolder1_ddl稽查_作業階段");
-    var stageVal = "";
-    if (s) {
-      var opt = Array.from(s.options).find(function(o){
-        return o.text.indexOf("承辦") >= 0;
-      });
-      if (opt) {
-        stageVal = opt.value;
-        setSelectValue(s, stageVal);
-      }
-    } else {
-      console.warn("找不到 ddl稽查_作業階段");
-    }
-
-    var tries = 0;
-    var t = setInterval(function(){
-      tries++;
-      var u = document.getElementById("ctl00_ContentPlaceHolder1_ddl稽查_處理人員");
-      if (u && u.options && u.options.length > 1 && !isAjaxBusy()) {
-        setTimeout(function(){
-          if (isAjaxBusy()) return;
-          s = document.getElementById("ctl00_ContentPlaceHolder1_ddl稽查_作業階段");
-          u = document.getElementById("ctl00_ContentPlaceHolder1_ddl稽查_處理人員");
-          if (!u || !u.options || u.options.length <= 1) return;
-          if (s && stageVal && s.value !== stageVal) {
-            setSelectValue(s, stageVal);
-            return;
-          }
-          if (setSelectValue(u, undertakerVal)) {
-            clearInterval(t);
-            console.log("🎯 [防蓋台成功] 來源文件保存 AJAX 已穩定，開始填入承辦人...");
-            if (cb) setTimeout(cb, 200);
-          }
-        }, 200);
-      } else if (tries > 40) {
-        clearInterval(t);
-        console.warn("❌ [逾時] 來源文件保存等不到系統 AJAX 穩定");
-        if (cb) cb();
-      }
-    }, 300);
-  }
-
-  function setSourceYes() {
-    ["op1_y", "op21_y", "op22_y", "op23_y"].forEach(function(id){
-      var el = document.getElementById(id);
-      if (!el) {
-        console.warn("not found", id);
-        return;
-      }
-      if (!el.checked) el.click();
-      el.checked = true;
-      el.dispatchEvent(new Event("input", { bubbles:true }));
-      el.dispatchEvent(new Event("change", { bubbles:true }));
-    });
-  }
-
-  function tab(hash, wait, cb) {
-    var a = document.querySelector('a[href$="' + hash + '"]');
-    if (a) a.click();
-    setTimeout(cb || function(){}, wait || 400);
-  }
-
-  function getMenuId() {
-    if (document.getElementById("ctl00_ContentPlaceHolder1_projectSearch_lstbMenu")) {
-      return "ctl00_ContentPlaceHolder1_projectSearch_lstbMenu";
-    }
-    return "ctl00_ContentPlaceHolder1_lstbMenu";
-  }
-
-  function doProject(menuId, cb) {
-    var lb = document.getElementById(menuId);
-    if (!lb) {
-      console.warn("找不到專案清單", menuId);
-      if (cb) cb();
-      return;
-    }
-
-    var opt = Array.from(lb.options).find(function(o){
-      return o.text.trim().indexOf(projectName) >= 0;
-    });
-
-    if (!opt) {
-      console.warn("找不到專案", projectName);
-      if (cb) cb();
-      return;
-    }
-
-    opt.selected = true;
-    lb.dispatchEvent(new Event("change", { bubbles:true }));
-
-    var setBtn = document.getElementById("btnSet");
-    if (setBtn) setBtn.click();
-
-    setTimeout(function(){
-      var commitBtn = document.getElementById("btnCommit");
-      if (commitBtn) commitBtn.click();
-
-      setTimeout(function(){
-        if (cb) cb();
-      }, 700);
-    }, 450);
-  }
-
-  function doSearchWait(cb) {
-    if (!hasProjectName) {
-      if (cb) cb();
-      return;
-    }
-
-    var btn = document.getElementById("btnSearch") || document.getElementById("btnPjDoSearch");
-    if (btn) btn.click();
-
-    var menuId = getMenuId();
-    var tries = 0;
-    var t = setInterval(function(){
-      tries++;
-      var lb = document.getElementById(menuId);
-      if (lb && lb.options.length > 0) {
-        clearInterval(t);
-        doProject(menuId, cb);
-      } else if (tries >= 30) {
-        clearInterval(t);
-        console.warn("專案清單逾時，繼續後續流程");
-        if (cb) cb();
-      }
-    }, 250);
-  }
-
-  if (!document.getElementById("op1_y") && !document.getElementById("ctl00_ContentPlaceHolder1_ddl稽查_作業階段")) {
-    alert("找不到來源文件保存頁面元素");
-    return;
-  }
-
-  tab("#tabs2", 350, function(){
-    doSearchWait(function(){
-      tab("#tabs1", 300, function(){
-        setSourceYes();
-
-        tab("#tabs3", 350, function(){
-          setResult();
-          setStageAndHandler(function(){
-            console.log("來源文件保存完成");
-          });
-        });
-      });
-    });
-  });
-})()`;
+  var code = '(function(){\n' + buildCommon(cfg) + '\n' +
+    'if(!document.getElementById("op1_y")&&!document.getElementById("ctl00_ContentPlaceHolder1_ddl稽查_作業階段")){alert("找不到來源文件保存頁面元素");return;}\n' +
+    'goTabWait("#tabs2",350,function(){\n' +
+    '  doSearchWait(getMenuId(),function(){\n' +
+    '    goTabWait("#tabs1",300,function(){\n' +
+    '      chks(["op1_y","op21_y","op22_y","op23_y"]);\n' +
+    '      goTabWait("#tabs3",350,function(){\n' +
+    '        setResult(["ctl00_ContentPlaceHolder1_ddlRES"]);\n' +
+    '        setStageAndU("ctl00_ContentPlaceHolder1_ddl稽查_作業階段","ctl00_ContentPlaceHolder1_ddl稽查_處理人員",function(){console.log("來源文件保存完成");},{ajax:1,log:"🎯 [防蓋台成功] 來源文件保存 AJAX 已穩定，開始填入承辦人...",timeoutLog:"❌ [逾時] 來源文件保存等不到系統 AJAX 穩定"});\n' +
+    '      });\n' +
+    '    });\n' +
+    '  });\n' +
+    '});\n' +
+    '})()';
 
   showScript(code, '來源文件保存', 'source');
 }
@@ -588,46 +394,8 @@ function runGHP() {
     '          setTimeout(function(){\n' +
     mc + '\n' +
     '            setResult(["ctl00_ContentPlaceHolder1_ddlRES"]);\n' +
-    '            function setGhpStageAndReceiver(){\n' +
-    '              var s=document.getElementById("ctl00_ContentPlaceHolder1_ddlstep");\n' +
-    '              if(s){setNativeSelect(s,"1");}\n' +
-    '              var ghpTries=0;\n' +
-    '              var ghpT=setInterval(function(){\n' +
-    '                ghpTries++;\n' +
-    '                var isSystemBusy=false;\n' +
-    '                if(window.Sys&&Sys.WebForms&&Sys.WebForms.PageRequestManager){\n' +
-    '                  try{isSystemBusy=Sys.WebForms.PageRequestManager.getInstance().get_isInAsyncPostBack();}catch(e){isSystemBusy=false;}\n' +
-    '                }\n' +
-    '                var u=document.getElementById("ctl00_ContentPlaceHolder1_ddlreceivepeople");\n' +
-    '                if(u&&u.options&&u.options.length>1&&!isSystemBusy){\n' +
-    '                  setTimeout(function(){\n' +
-    '                    var busyAgain=false;\n' +
-    '                    if(window.Sys&&Sys.WebForms&&Sys.WebForms.PageRequestManager){\n' +
-    '                      try{busyAgain=Sys.WebForms.PageRequestManager.getInstance().get_isInAsyncPostBack();}catch(e){busyAgain=false;}\n' +
-    '                    }\n' +
-    '                    if(busyAgain)return;\n' +
-    '                    clearInterval(ghpT);\n' +
-    '                    u=document.getElementById("ctl00_ContentPlaceHolder1_ddlreceivepeople");\n' +
-    '                    if(!u)return;\n' +
-    '                    console.log("🎯 [防蓋台成功] 系統 AJAX 已落地且停止忙碌，開始填入承辦人...");\n' +
-    '                    if($&&$(u).selectpicker){\n' +
-    '                      $(u).selectpicker("val",undertakerVal);\n' +
-    '                      $(u).selectpicker("refresh");\n' +
-    '                      $(u).trigger("changed.bs.select");\n' +
-    '                    }else{\n' +
-    '                      u.value=undertakerVal;\n' +
-    '                      u.dispatchEvent(new Event("input",{bubbles:true}));\n' +
-    '                      u.dispatchEvent(new Event("change",{bubbles:true}));\n' +
-    '                    }\n' +
-    '                  },200);\n' +
-    '                }else if(ghpTries>40){\n' +
-    '                  clearInterval(ghpT);\n' +
-    '                  console.warn("❌ [逾時] 等不到系統 AJAX 穩定");\n' +
-    '                }\n' +
-    '              },300);\n' +
-    '            }\n' +
     // GHP 預覽/流程分頁會重新渲染欄位；先切到 tab4，再等 ASP.NET AJAX 完全停止後補選承辦員
-    '            goTab("#tab4",function(){setGhpStageAndReceiver();});\n' +
+    '            goTab("#tab4",function(){setStageAndU("ctl00_ContentPlaceHolder1_ddlstep","ctl00_ContentPlaceHolder1_ddlreceivepeople",0,{ajax:1,stageVal:"1",log:"🎯 [防蓋台成功] 系統 AJAX 已落地且停止忙碌，開始填入承辦人...",timeoutLog:"❌ [逾時] 等不到系統 AJAX 穩定"});});\n' +
     '          },600);\n' +
     '        });\n' +
     '      });\n' +
@@ -652,7 +420,7 @@ function runExpired() {
     '      goTab("#tabs3",function(){\n' +
     '        setResult(["ctl00_ContentPlaceHolder1_ddlRES"]);\n' +
     // 承辦
-    '        setStageAndU("ctl00_ContentPlaceHolder1_ddl稽查_作業階段","ctl00_ContentPlaceHolder1_ddl稽查_處理人員");\n' +
+    '        setStageAndU("ctl00_ContentPlaceHolder1_ddl稽查_作業階段","ctl00_ContentPlaceHolder1_ddl稽查_處理人員",0,{ajax:1,log:"🎯 [防蓋台成功] 逾期食品 AJAX 已穩定，填入承辦人",timeoutLog:"❌ [逾時] 逾期食品等不到系統 AJAX 穩定"});\n' +
     '      });\n' +
     '    });\n' +
     '  });\n' +
