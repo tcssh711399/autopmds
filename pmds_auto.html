@@ -202,6 +202,10 @@
       <div class="item-name">🏷️ 標示抽驗</div>
       <div class="item-status" id="log-label"><span class="sdot d-gray"></span>待產出</div>
     </div>
+    <div class="item-card" id="card-contract" role="button" tabindex="0" onclick="runContract()" onkeydown="cardKeyRun(event, runContract)">
+      <div class="item-name">📑 定型化契約測試</div>
+      <div class="item-status" id="log-contract"><span class="sdot d-gray"></span>待產出</div>
+    </div>
   </div>
 </div>
 
@@ -499,6 +503,923 @@ function runLabel() {
   showScript(code, '標示抽驗', 'label');
 }
 
+// ── 7. 定型化契約測試 ─────────────────────────────────
+function runContract() {
+  var cfg = getConfig();
+  var undertakerName = getSelectedOptionText('undertaker');
+
+  // Keep this standalone: it runs on the PMDS page and shows its own test dialog.
+  async function contractBookmark(undertakerVal, undertakerName, projectName, hasProjectName) {
+    const wait = ms =>
+      new Promise(resolve => setTimeout(resolve, ms));
+
+    function isAjaxBusy() {
+      try {
+        return Boolean(
+          window.Sys &&
+          Sys.WebForms &&
+          Sys.WebForms.PageRequestManager &&
+          Sys.WebForms.PageRequestManager
+            .getInstance()
+            .get_isInAsyncPostBack()
+        );
+      } catch {
+        return false;
+      }
+    }
+
+    async function waitAjax(timeout = 15000) {
+      const start = Date.now();
+
+      while (isAjaxBusy()) {
+        if (Date.now() - start > timeout) {
+          throw new Error('等待網站 AJAX 逾時');
+        }
+
+        await wait(200);
+      }
+
+      await wait(600);
+    }
+
+    function triggerChange(element) {
+      element.dispatchEvent(
+        new Event('input', { bubbles: true })
+      );
+
+      element.dispatchEvent(
+        new Event('change', { bubbles: true })
+      );
+    }
+
+    function setSelect(element, value) {
+      if (!element) {
+        throw new Error('找不到選單');
+      }
+
+      const option = [...element.options].find(
+        item => String(item.value) === String(value)
+      );
+
+      if (!option) {
+        throw new Error(
+          `${element.id} 找不到選項值：${value}`
+        );
+      }
+
+      element.value = String(value);
+      option.selected = true;
+      triggerChange(element);
+
+      if (window.jQuery) {
+        try {
+          window.jQuery(element).trigger('change');
+        } catch {}
+
+        try {
+          window.jQuery(element)
+            .selectpicker('val', String(value));
+
+          window.jQuery(element)
+            .selectpicker('refresh');
+
+          window.jQuery(element)
+            .trigger('changed.bs.select');
+        } catch {}
+      }
+    }
+
+    function setText(id, value) {
+      const element = document.getElementById(id);
+
+      if (!element) {
+        throw new Error(`找不到欄位：${id}`);
+      }
+
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        'value'
+      )?.set;
+
+      if (setter) {
+        setter.call(element, value);
+      } else {
+        element.value = value;
+      }
+
+      triggerChange(element);
+
+      element.dispatchEvent(
+        new Event('blur', { bubbles: true })
+      );
+
+      if (element.value !== value) {
+        throw new Error(`${id} 寫入失敗`);
+      }
+    }
+
+    function getItem() {
+      const element = document.getElementById(
+        'ctl00_ContentPlaceHolder1_Contract_items'
+      );
+
+      if (!element) {
+        throw new Error('找不到稽查子項目欄位');
+      }
+
+      return {
+        value: String(element.value),
+        text:
+          element.options[element.selectedIndex]
+            ?.text.trim() || element.value
+      };
+    }
+
+    function getConfig(itemValue) {
+      const configs = {
+        '1': {
+          yesId:
+            'ctl00_ContentPlaceHolder1_food_contract_0',
+
+          noId:
+            'ctl00_ContentPlaceHolder1_food_contract_1',
+
+          keywords: [
+            'food_result',
+            'food_shouldnot_result'
+          ]
+        },
+
+        '2': {
+          yesId:
+            'ctl00_ContentPlaceHolder1_Voucher_contract_0',
+
+          noId:
+            'ctl00_ContentPlaceHolder1_Voucher_contract_1',
+
+          keywords: [
+            'voucher_should_result',
+            'voucher_shouldnot_result'
+          ]
+        },
+
+        '3': {
+          yesId:
+            'ctl00_ContentPlaceHolder1_Banquets_contract_0',
+
+          noId:
+            'ctl00_ContentPlaceHolder1_Banquets_contract_1',
+
+          keywords: [
+            'banquets_should_result',
+            'banquets_shouldnot_result'
+          ]
+        }
+      };
+
+      const config = configs[itemValue];
+
+      if (!config) {
+        throw new Error(
+          `不支援的稽查子項目：${itemValue}`
+        );
+      }
+
+      return config;
+    }
+
+    function getProjectMenuId() {
+      const ids = [
+        'ctl00_ContentPlaceHolder1_projectSearch_lstbMenu',
+        'ctl00_ContentPlaceHolder1_ucProjectSearch_lstbMenu',
+        'ctl00_ContentPlaceHolder1_lstbMenu'
+      ];
+
+      return ids.find(id => document.getElementById(id)) || ids[0];
+    }
+
+    function buttonVisible(element) {
+      return Boolean(
+        element &&
+        (
+          element.offsetWidth ||
+          element.offsetHeight ||
+          element.getClientRects().length
+        )
+      );
+    }
+
+    function pickProjectSearchButton() {
+      const buttons = [
+        document.getElementById('btnSearch'),
+        document.getElementById('btnPjDoSearch')
+      ].filter(Boolean);
+
+      return (
+        buttons.find(buttonVisible) ||
+        buttons[0] ||
+        null
+      );
+    }
+
+    async function waitProjectList(menuId) {
+      const start = Date.now();
+
+      while (Date.now() - start <= 15000) {
+        const list = document.getElementById(menuId);
+
+        if (
+          list &&
+          list.options &&
+          list.options.length > 0
+        ) {
+          return list;
+        }
+
+        await wait(250);
+      }
+
+      throw new Error('等不到專案清單');
+    }
+
+    async function applyProject() {
+      if (!hasProjectName) {
+        return false;
+      }
+
+      const searchButton = pickProjectSearchButton();
+
+      if (searchButton) {
+        searchButton.click();
+      }
+
+      await waitAjax();
+
+      const menuId = getProjectMenuId();
+      const list = await waitProjectList(menuId);
+      const option = [...list.options].find(item =>
+        item.text.trim().includes(projectName)
+      );
+
+      if (!option) {
+        throw new Error(`找不到專案：${projectName}`);
+      }
+
+      option.selected = true;
+      triggerChange(list);
+
+      const setButton = document.getElementById('btnSet');
+
+      if (setButton) {
+        setButton.click();
+        await wait(400);
+      }
+
+      const commitButton = document.getElementById('btnCommit');
+
+      if (commitButton) {
+        commitButton.click();
+      }
+
+      await waitAjax();
+      return true;
+    }
+
+    function createStatusBox() {
+      document
+        .getElementById('contractTestStatusBox')
+        ?.remove();
+
+      const box = document.createElement('div');
+      box.id = 'contractTestStatusBox';
+
+      box.style.cssText = `
+        position:fixed;
+        top:70px;
+        right:30px;
+        width:390px;
+        padding:16px 18px;
+        background:#fff;
+        border:2px solid #26734d;
+        border-radius:9px;
+        box-shadow:0 5px 24px rgba(0,0,0,.28);
+        z-index:999998;
+        font-family:"Microsoft JhengHei",sans-serif;
+        font-size:14px;
+        line-height:1.65;
+        color:#222;
+        white-space:pre-line;
+      `;
+
+      document.body.appendChild(box);
+
+      return box;
+    }
+
+    function showStatus(box, text, type = 'working') {
+      box.textContent = text;
+
+      if (type === 'success') {
+        box.style.borderColor = '#26734d';
+        box.style.color = '#26734d';
+      } else if (type === 'error') {
+        box.style.borderColor = '#c0392b';
+        box.style.color = '#c0392b';
+      } else {
+        box.style.borderColor = '#26734d';
+        box.style.color = '#444';
+      }
+    }
+
+    function createDialog(currentItemValue = '1') {
+      document
+        .getElementById('contractBookmarkDialog')
+        ?.remove();
+
+      return new Promise(resolve => {
+        const box = document.createElement('div');
+        box.id = 'contractBookmarkDialog';
+
+        box.style.cssText = `
+          position:fixed;
+          top:55px;
+          right:30px;
+          width:420px;
+          padding:18px;
+          background:#fff;
+          border:2px solid #26734d;
+          border-radius:10px;
+          box-shadow:0 5px 25px rgba(0,0,0,.3);
+          z-index:999999;
+          font-family:"Microsoft JhengHei",sans-serif;
+          color:#222;
+        `;
+
+        box.innerHTML = `
+          <div style="
+            font-size:18px;
+            font-weight:700;
+            color:#26734d;
+            margin-bottom:14px;
+          ">
+            定型化契約測試
+          </div>
+
+          <label style="
+            display:block;
+            font-size:14px;
+            font-weight:700;
+            margin-bottom:6px;
+          ">
+            稽查子項目
+          </label>
+
+          <select id="contractDialogItem" style="
+            width:100%;
+            box-sizing:border-box;
+            padding:9px;
+            margin-bottom:16px;
+            border:1px solid #aaa;
+            border-radius:6px;
+            font-size:14px;
+            font-family:inherit;
+          ">
+            <option value="1">
+              食品或餐飲通訊交易定型化契約
+            </option>
+
+            <option value="2">
+              餐飲業等商品(服務)禮券定型化契約
+            </option>
+
+            <option value="3">
+              訂席、外燴(辦桌)服務定型化契約
+            </option>
+          </select>
+
+          <div style="
+            font-size:14px;
+            font-weight:700;
+            margin-bottom:8px;
+          ">
+            稽查結果
+          </div>
+
+          <button data-mode="yes-ok" style="
+            width:100%;
+            padding:11px;
+            margin-bottom:8px;
+            border:0;
+            border-radius:6px;
+            background:#287c51;
+            color:#fff;
+            font-size:15px;
+            font-weight:700;
+            cursor:pointer;
+          ">
+            有使用－符合規定
+          </button>
+
+          <button data-mode="yes-fix" style="
+            width:100%;
+            padding:11px;
+            margin-bottom:8px;
+            border:0;
+            border-radius:6px;
+            background:#d58b20;
+            color:#fff;
+            font-size:15px;
+            font-weight:700;
+            cursor:pointer;
+          ">
+            有使用－限期改善
+          </button>
+
+          <button data-mode="no-na" style="
+            width:100%;
+            padding:11px;
+            margin-bottom:8px;
+            border:0;
+            border-radius:6px;
+            background:#66727c;
+            color:#fff;
+            font-size:15px;
+            font-weight:700;
+            cursor:pointer;
+          ">
+            未使用－不適用
+          </button>
+
+          <button data-mode="no-fix" style="
+            width:100%;
+            padding:11px;
+            margin-bottom:8px;
+            border:0;
+            border-radius:6px;
+            background:#a85d32;
+            color:#fff;
+            font-size:15px;
+            font-weight:700;
+            cursor:pointer;
+          ">
+            未使用－限期改善
+          </button>
+
+          <button data-mode="cancel" style="
+            width:100%;
+            padding:8px;
+            border:0;
+            border-radius:6px;
+            background:#eee;
+            color:#444;
+            cursor:pointer;
+          ">
+            取消
+          </button>
+        `;
+
+        document.body.appendChild(box);
+
+        const itemSelect = box.querySelector(
+          '#contractDialogItem'
+        );
+
+        if (
+          ['1', '2', '3'].includes(
+            String(currentItemValue)
+          )
+        ) {
+          itemSelect.value =
+            String(currentItemValue);
+        }
+
+        box.querySelectorAll('button').forEach(
+          button => {
+            button.onclick = () => {
+              const result = {
+                mode: button.dataset.mode,
+                itemValue: itemSelect.value
+              };
+
+              box.remove();
+              resolve(result);
+            };
+          }
+        );
+      });
+    }
+
+    async function selectUsage(id) {
+      const radio = document.getElementById(id);
+
+      if (!radio) {
+        throw new Error(
+          '找不到「有無使用定型化契約」欄位'
+        );
+      }
+
+      if (!radio.checked) {
+        radio.click();
+        await waitAjax();
+      }
+
+      if (!radio.checked) {
+        radio.checked = true;
+        radio.setAttribute('checked', 'checked');
+        triggerChange(radio);
+
+        await wait(400);
+      }
+
+      if (!radio.checked) {
+        throw new Error('是／否未成功勾選');
+      }
+    }
+
+    function fillVoucherFields() {
+      setText(
+        'ctl00_ContentPlaceHolder1_Voucher_Name',
+        '餐券'
+      );
+
+      setText(
+        'ctl00_ContentPlaceHolder1_Industry_Name',
+        '同稽查廠商'
+      );
+    }
+
+    function findCompliantRadios(config) {
+      return [
+        ...document.querySelectorAll(
+          'input[type="radio"]'
+        )
+      ].filter(radio => {
+        const identity =
+          `${radio.id} ${radio.name}`.toLowerCase();
+
+        return (
+          config.keywords.some(keyword =>
+            identity.includes(keyword)
+          ) &&
+          String(radio.value).toLowerCase() === 'y'
+        );
+      });
+    }
+
+    async function setAllCompliant(config) {
+      let radios = [];
+
+      for (let i = 0; i < 50; i++) {
+        radios = findCompliantRadios(config);
+
+        if (radios.length) {
+          break;
+        }
+
+        await wait(250);
+      }
+
+      if (!radios.length) {
+        throw new Error('找不到查驗明細');
+      }
+
+      radios.forEach(radio => {
+        radio.checked = true;
+        radio.setAttribute('checked', 'checked');
+        triggerChange(radio);
+      });
+
+      await wait(400);
+
+      const checkedCount = radios.filter(
+        radio => radio.checked
+      ).length;
+
+      if (checkedCount !== radios.length) {
+        throw new Error(
+          `明細共 ${radios.length} 項，只有 ${checkedCount} 項成功`
+        );
+      }
+
+      return checkedCount;
+    }
+
+    async function setResult(value) {
+      const resultSelect = document.getElementById(
+        'ctl00_ContentPlaceHolder1_ddlRES'
+      );
+
+      if (!resultSelect) {
+        throw new Error('找不到稽查結果選單');
+      }
+
+      setSelect(resultSelect, value);
+      await waitAjax();
+
+      const radioIds = {
+        '1':
+          'ctl00_ContentPlaceHolder1_rbRES1',
+
+        '2':
+          'ctl00_ContentPlaceHolder1_rbRES2',
+
+        '12':
+          'ctl00_ContentPlaceHolder1_rbRES12'
+      };
+
+      const radio = document.getElementById(
+        radioIds[value]
+      );
+
+      if (radio && !radio.checked) {
+        radio.click();
+        await waitAjax();
+      }
+
+      if (String(resultSelect.value) !== String(value)) {
+        setSelect(resultSelect, value);
+        await wait(300);
+      }
+    }
+
+    async function setUndertaker() {
+      const stageSelect = document.getElementById(
+        'ctl00_ContentPlaceHolder1_ddl稽查_作業階段'
+      );
+
+      if (!stageSelect) {
+        throw new Error('找不到作業階段選單');
+      }
+
+      const stageOption = [...stageSelect.options].find(
+        option => option.text.includes('承辦')
+      );
+
+      if (!stageOption) {
+        throw new Error('找不到承辦階段');
+      }
+
+      setSelect(stageSelect, stageOption.value);
+      await waitAjax();
+
+      const start = Date.now();
+      let userSelect = null;
+
+      while (Date.now() - start <= 15000) {
+        userSelect = document.getElementById(
+          'ctl00_ContentPlaceHolder1_ddl稽查_處理人員'
+        );
+
+        if (
+          userSelect &&
+          userSelect.options &&
+          userSelect.options.length > 1 &&
+          !isAjaxBusy()
+        ) {
+          break;
+        }
+
+        await wait(250);
+      }
+
+      if (
+        !userSelect ||
+        !userSelect.options ||
+        userSelect.options.length <= 1
+      ) {
+        throw new Error('找不到承辦人員選單');
+      }
+
+      await wait(200);
+      setSelect(userSelect, undertakerVal);
+    }
+
+    let statusBox = null;
+
+    try {
+      const itemSelect = document.getElementById(
+        'ctl00_ContentPlaceHolder1_Contract_items'
+      );
+
+      if (!itemSelect) {
+        throw new Error(
+          '目前頁面找不到稽查子項目欄位'
+        );
+      }
+
+      const choice = await createDialog(
+        itemSelect.value
+      );
+
+      if (choice.mode === 'cancel') {
+        return;
+      }
+
+      statusBox = createStatusBox();
+
+      showStatus(
+        statusBox,
+        '正在設定稽查子項目……'
+      );
+
+      if (
+        String(itemSelect.value) !==
+        String(choice.itemValue)
+      ) {
+        setSelect(
+          itemSelect,
+          choice.itemValue
+        );
+
+        await waitAjax();
+      }
+
+      if (hasProjectName) {
+        showStatus(
+          statusBox,
+          '正在套用專案……'
+        );
+
+        await applyProject();
+
+        const itemSelectAfterProject = document.getElementById(
+          'ctl00_ContentPlaceHolder1_Contract_items'
+        );
+
+        if (
+          itemSelectAfterProject &&
+          String(itemSelectAfterProject.value) !==
+            String(choice.itemValue)
+        ) {
+          setSelect(
+            itemSelectAfterProject,
+            choice.itemValue
+          );
+
+          await waitAjax();
+        }
+      }
+
+      const item = getItem();
+      const config = getConfig(item.value);
+
+      const settings = {
+        'yes-ok': {
+          usage: 'yes',
+          result: '1',
+          resultText: '符合規定',
+          allCompliant: true
+        },
+
+        'yes-fix': {
+          usage: 'yes',
+          result: '2',
+          resultText: '限期改善',
+          allCompliant: false
+        },
+
+        'no-na': {
+          usage: 'no',
+          result: '12',
+          resultText: '不適用',
+          allCompliant: false
+        },
+
+        'no-fix': {
+          usage: 'no',
+          result: '2',
+          resultText: '限期改善',
+          allCompliant: false
+        }
+      };
+
+      const setting = settings[choice.mode];
+
+      if (!setting) {
+        throw new Error('無效的操作模式');
+      }
+
+      showStatus(
+        statusBox,
+        `子項目：${item.text}\n` +
+        '正在設定有無使用定型化契約……'
+      );
+
+      await selectUsage(
+        setting.usage === 'yes'
+          ? config.yesId
+          : config.noId
+      );
+
+      if (
+        item.value === '2' &&
+        setting.usage === 'yes'
+      ) {
+        showStatus(
+          statusBox,
+          `子項目：${item.text}\n` +
+          '正在填寫禮券名稱及發行商家……'
+        );
+
+        fillVoucherFields();
+        await wait(300);
+      }
+
+      let compliantCount = 0;
+
+      if (setting.allCompliant) {
+        showStatus(
+          statusBox,
+          `子項目：${item.text}\n` +
+          '正在將所有明細設為符合……'
+        );
+
+        compliantCount =
+          await setAllCompliant(config);
+      }
+
+      showStatus(
+        statusBox,
+        `子項目：${item.text}\n` +
+        `有無使用：${
+          setting.usage === 'yes' ? '是' : '否'
+        }\n` +
+        '正在設定稽查結果……'
+      );
+
+      await setResult(setting.result);
+
+      showStatus(
+        statusBox,
+        `子項目：${item.text}\n` +
+        `有無使用：${
+          setting.usage === 'yes' ? '是' : '否'
+        }\n` +
+        `稽查結果：${setting.resultText}\n` +
+        '正在設定承辦員……'
+      );
+
+      await setUndertaker();
+
+      showStatus(
+        statusBox,
+        `測試完成\n\n` +
+        (
+          hasProjectName
+            ? `專案：${projectName}\n`
+            : ''
+        ) +
+        `子項目：${item.text}\n` +
+        `有無使用：${
+          setting.usage === 'yes' ? '是' : '否'
+        }\n` +
+        `稽查結果：${setting.resultText}\n` +
+        (
+          setting.allCompliant
+            ? `明細符合：${compliantCount} 項\n`
+            : setting.usage === 'yes'
+              ? `明細：請人工填寫\n`
+              : `明細：未處理\n`
+        ) +
+        (
+          item.value === '2' &&
+          setting.usage === 'yes'
+            ? `禮券名稱：餐券\n` +
+              `禮券發行商家：同稽查廠商\n`
+            : ''
+        ) +
+        `承辦員：${undertakerName || undertakerVal}\n` +
+        `\n尚未送出。`,
+        'success'
+      );
+
+    } catch (error) {
+      console.error(
+        '定型化契約測試失敗：',
+        error
+      );
+
+      if (!statusBox) {
+        statusBox = createStatusBox();
+      }
+
+      showStatus(
+        statusBox,
+        `測試失敗\n\n${error.message}`,
+        'error'
+      );
+    }
+  }
+
+  var code = '(' + contractBookmark.toString() + ')(' +
+    JSON.stringify(cfg.undertaker) + ',' +
+    JSON.stringify(undertakerName) + ',' +
+    JSON.stringify(cfg.project) + ',' +
+    JSON.stringify(cfg.hasProject) +
+    ')';
+  showScript(code, '定型化契約測試', 'contract');
+}
+
 // ── Dialog ────────────────────────────────────────────
 function getSelectedOptionText(selectId) {
   var el = document.getElementById(selectId);
@@ -510,7 +1431,7 @@ function getDialogStateText(activeLogId) {
   var undertakerName = getSelectedOptionText('undertaker') || '未選承辦';
   var project = document.getElementById('projectName').value.trim();
   var projectState = project || '無專案';
-  var resultState = activeLogId === 'ghp' ? currentResult : '合格';
+  var resultState = activeLogId === 'ghp' ? currentResult : (activeLogId === 'contract' ? '測試選擇' : '合格');
   var extra = '';
   if (activeLogId === 'ghp') {
     var meats = [];
@@ -534,7 +1455,7 @@ function updateDialogStateSummary(activeLogId) {
   summary.dataset.activeLogId = activeLogId;
   var undertakerName = getSelectedOptionText('undertaker') || '未選承辦';
   var project = document.getElementById('projectName').value.trim() || '無專案';
-  var resultState = activeLogId === 'ghp' ? currentResult : '合格';
+  var resultState = activeLogId === 'ghp' ? currentResult : (activeLogId === 'contract' ? '測試選擇' : '合格');
   var meats = [];
   if (activeLogId === 'ghp') {
     if (currentMeats['非規範對象']) meats.push('非規範');
@@ -803,7 +1724,7 @@ function fitDialogToViewport(d) {
 }
 
 function resetLogsExcept(activeId) {
-  ['source','ghp','expired','reg','insurance','label'].forEach(function(id) {
+  ['source','ghp','expired','reg','insurance','label','contract'].forEach(function(id) {
     if (id === activeId) return;
     setLog(id, '待產出', 'gray');
     var card = document.getElementById('card-' + id);
