@@ -1147,28 +1147,44 @@ function runContract() {
         'ctl00_ContentPlaceHolder1_ddl稽查_作業階段'
       );
 
-      if (!stageSelect) {
-        throw new Error('找不到作業階段選單');
+      if (stageSelect) {
+        const stageOption = [...stageSelect.options].find(
+          option => option.text.includes('承辦')
+        );
+
+        if (stageOption) {
+          setSelect(stageSelect, stageOption.value);
+          await waitAjax();
+        }
       }
-
-      const stageOption = [...stageSelect.options].find(
-        option => option.text.includes('承辦')
-      );
-
-      if (!stageOption) {
-        throw new Error('找不到承辦階段');
-      }
-
-      setSelect(stageSelect, stageOption.value);
-      await waitAjax();
 
       const start = Date.now();
       let userSelect = null;
+      const userIds = [
+        'ctl00_ContentPlaceHolder1_ddl稽查_處理人員',
+        'ctl00_ContentPlaceHolder1_ddlUndertake',
+        'ctl00_ContentPlaceHolder1_ddlreceivepeople'
+      ];
+
+      function findUserSelect() {
+        for (const id of userIds) {
+          const element = document.getElementById(id);
+
+          if (element) {
+            return element;
+          }
+        }
+
+        return [...document.querySelectorAll('select')].find(
+          element =>
+            /承辦|處理人員|undertake|receivepeople/i.test(
+              `${element.id} ${element.name || ''}`
+            )
+        );
+      }
 
       while (Date.now() - start <= 15000) {
-        userSelect = document.getElementById(
-          'ctl00_ContentPlaceHolder1_ddl稽查_處理人員'
-        );
+        userSelect = findUserSelect();
 
         if (
           userSelect &&
