@@ -5,14 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PMDS 多專案控制版</title>
 <style>
-:root{
-  --green:#2d7a4f;--green2:#4a9e6e;--light:#e8f5ee;--border:#c8e0d2;
-  --text:#1a2e22;--muted:#6b8f7a;--bg:#f4faf7;--white:#fff;--red:#c0392b;
-  --shadow:0 2px 12px rgba(45,122,79,.10)
-}
+:root{--green:#2d7a4f;--green2:#4a9e6e;--light:#e8f5ee;--border:#c8e0d2;--text:#1a2e22;--muted:#6b8f7a;--bg:#f4faf7;--white:#fff;--red:#c0392b;--shadow:0 2px 12px rgba(45,122,79,.10)}
 *{box-sizing:border-box}body{margin:0;padding:20px;font-family:'Microsoft JhengHei','微軟正黑體',sans-serif;background:var(--bg);color:var(--text)}
 .wrap{max-width:900px;margin:auto}h1{font-size:24px;color:var(--green);border-left:5px solid var(--green);padding-left:12px;margin:0 0 18px}
-.panel{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
+.panel{background:#fff;border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
 .title{font-size:18px;font-weight:800;color:var(--green);padding-bottom:10px;margin-bottom:12px;border-bottom:1px solid var(--border)}
 .notice{padding:12px 14px;border-radius:8px;background:#fff7e8;border:1px solid #e2b45d;color:#8a4b10;font-weight:700;line-height:1.55;margin-bottom:16px}
 .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}.field{flex:1;min-width:240px}.label{display:block;font-size:14px;font-weight:700;color:var(--muted);margin-bottom:5px}
@@ -27,24 +23,18 @@ button{border:0;border-radius:7px;padding:9px 14px;font:inherit;font-weight:700;
 <body>
 <div class="wrap">
 <h1>🍃 PMDS 多專案控制版</h1>
-<div class="notice">用途：一次建立多個專案，書籤執行後會在 PMDS 內連續加入。專案清單只在必要時開啟；全部成功時不顯示訊息，只有找不到或執行失敗才會回報。</div>
+<div class="notice">新版為真正批次加入：只開一次專案清單，一次選取所有專案，只按一次加入、一次儲存。全部成功時不顯示訊息；只有找不到或執行失敗才回報。</div>
 
 <div class="panel">
   <div class="title">① 專案清單</div>
   <div class="row">
-    <div class="field">
-      <span class="label">新增單一專案</span>
-      <input id="newProject" type="text" placeholder="輸入完整專案名稱">
-    </div>
+    <div class="field"><span class="label">新增單一專案</span><input id="newProject" type="text" placeholder="輸入完整專案名稱"></div>
     <button class="primary" id="addBtn">＋ 加入</button>
   </div>
   <div style="margin-top:14px">
     <span class="label">一次貼上多個專案（每行一個）</span>
-    <textarea id="bulkInput" placeholder="例如：\n115年○○專案\n115年△△專案\n115年□□專案"></textarea>
-    <div class="toolbar">
-      <button class="primary" id="bulkAddBtn">批次加入全部</button>
-      <button class="danger" id="clearBtn">清空全部</button>
-    </div>
+    <textarea id="bulkInput" placeholder="115年○○專案\n115年△△專案\n115年□□專案"></textarea>
+    <div class="toolbar"><button class="primary" id="bulkAddBtn">批次加入全部</button><button class="danger" id="clearBtn">清空全部</button></div>
   </div>
 </div>
 
@@ -57,136 +47,58 @@ button{border:0;border-radius:7px;padding:9px 14px;font:inherit;font-weight:700;
 <div class="panel">
   <div class="title">③ 多專案書籤</div>
   <button class="primary" id="generateBtn">產生書籤腳本</button>
-  <div class="toolbar">
-    <button class="secondary" id="copyBtn">複製腳本</button>
-  </div>
-  <textarea id="scriptOutput" class="scriptbox" readonly placeholder="加入至少一個專案後，按「產生書籤腳本」"></textarea>
-  <div class="hint">把整段 <b>javascript:...</b> 放到瀏覽器書籤網址欄。使用時先打開對應 PMDS 稽查資料頁，再點書籤。腳本會盡量沿用同一個專案清單連續加入；全部成功時完全不跳視窗，只有失敗項目才會最後顯示。</div>
+  <div class="toolbar"><button class="secondary" id="copyBtn">複製腳本</button></div>
+  <textarea id="scriptOutput" class="scriptbox" readonly></textarea>
+  <div class="hint">執行時會一次開啟 PMDS 專案清單，把所有找到的專案同時選取，接著只執行一次「加入」與一次「儲存」。</div>
   <div class="status" id="status"></div>
 </div>
 </div>
 <script>
 (function(){
-  'use strict';
-  var STORAGE_KEY='pmds_multi_projects_v1';
-  var projects=[];
-  var $=function(id){return document.getElementById(id)};
-
-  function normalizeName(v){return String(v||'').trim().replace(/\s+/g,' ')}
-  function load(){
-    try{projects=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');if(!Array.isArray(projects))projects=[]}catch(e){projects=[]}
-    projects=projects.map(normalizeName).filter(Boolean);
-    projects=projects.filter(function(v,i,a){return a.indexOf(v)===i});
-    render();
-  }
-  function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(projects));render()}
-  function addNames(names){
-    var added=0;
-    names.forEach(function(raw){var n=normalizeName(raw);if(n&&projects.indexOf(n)<0){projects.push(n);added++}});
-    save();return added;
-  }
-  function render(){
-    $('countText').textContent='共 '+projects.length+' 項';
-    var box=$('projectList');box.innerHTML='';
-    if(!projects.length){box.innerHTML='<div class="empty">目前沒有專案</div>';return}
-    projects.forEach(function(name,index){
-      var item=document.createElement('div');item.className='project-item';
-      var num=document.createElement('div');num.className='num';num.textContent=index+1;
-      var nm=document.createElement('div');nm.className='name';nm.textContent=name;
-      var acts=document.createElement('div');acts.className='actions';
-      var up=document.createElement('button');up.className='secondary small';up.textContent='↑';up.disabled=index===0;up.onclick=function(){move(index,-1)};
-      var down=document.createElement('button');down.className='secondary small';down.textContent='↓';down.disabled=index===projects.length-1;down.onclick=function(){move(index,1)};
-      var edit=document.createElement('button');edit.className='secondary small';edit.textContent='編輯';edit.onclick=function(){editOne(index)};
-      var del=document.createElement('button');del.className='danger small';del.textContent='刪除';del.onclick=function(){projects.splice(index,1);save()};
-      acts.append(up,down,edit,del);item.append(num,nm,acts);box.appendChild(item);
-    });
-  }
-  function move(index,delta){var ni=index+delta;if(ni<0||ni>=projects.length)return;var t=projects[index];projects[index]=projects[ni];projects[ni]=t;save()}
-  function editOne(index){var v=prompt('修改專案名稱：',projects[index]);if(v===null)return;v=normalizeName(v);if(!v)return alert('專案名稱不可空白');var dup=projects.indexOf(v);if(dup>=0&&dup!==index)return alert('此專案已存在');projects[index]=v;save()}
-
-  function buildBookmarklet(){
-    if(!projects.length){alert('請先加入至少一個專案');return ''}
-    var runner = function(PROJECTS){
-      (async function(){
-        var wait=function(ms){return new Promise(function(r){setTimeout(r,ms)})};
-        function visible(el){return !!(el&&(el.offsetWidth||el.offsetHeight||el.getClientRects().length))}
-        function trigger(el,type){try{el.dispatchEvent(new Event(type,{bubbles:true}))}catch(e){}}
-        function getMenu(){
-          return document.getElementById('ctl00_ContentPlaceHolder1_projectSearch_lstbMenu') ||
-                 document.getElementById('ctl00_ContentPlaceHolder1_lstbMenu');
-        }
-        function getSearchButton(){
-          var a=document.getElementById('btnSearch'),b=document.getElementById('btnPjDoSearch');
-          return visible(a)?a:(visible(b)?b:(a||b));
-        }
-        async function waitAjax(maxMs){
-          maxMs=maxMs||8000;var start=Date.now();
-          while(Date.now()-start<maxMs){
-            var busy=false;
-            try{busy=window.Sys&&Sys.WebForms&&Sys.WebForms.PageRequestManager&&Sys.WebForms.PageRequestManager.getInstance().get_isInAsyncPostBack()}catch(e){}
-            if(!busy)return true;await wait(150);
-          }
-          return false;
-        }
-        async function waitMenu(maxMs){
-          maxMs=maxMs||5000;var start=Date.now();
-          while(Date.now()-start<maxMs){var m=getMenu();if(m&&m.options&&m.options.length)return m;await wait(180)}
-          return null;
-        }
-        async function ensureMenu(){
-          var list=getMenu();
-          if(list&&list.options&&list.options.length)return list;
-          var search=getSearchButton();
-          if(search){search.click();await wait(250);await waitAjax(8000)}
-          return await waitMenu(6000);
-        }
-        function findOption(list,name){
-          var opts=Array.from(list.options||[]);
-          var exact=opts.find(function(o){return o.text.trim()===name});
-          return exact||opts.find(function(o){return o.text.trim().includes(name)})||null;
-        }
-        async function applyProject(name){
-          var list=await ensureMenu();
-          if(!list)return {name:name,state:'fail',detail:'找不到專案清單'};
-          var opt=findOption(list,name);
-          if(!opt){
-            var search=getSearchButton();
-            if(search){search.click();await wait(250);await waitAjax(8000);list=await waitMenu(5000);if(list)opt=findOption(list,name)}
-          }
-          if(!opt)return {name:name,state:'missing',detail:'清單中找不到'};
-          opt.selected=true;trigger(list,'input');trigger(list,'change');await wait(100);
-          var setBtn=document.getElementById('btnSet');if(!setBtn)return {name:name,state:'fail',detail:'找不到 btnSet'};
-          setBtn.click();await wait(300);await waitAjax(8000);
-          var commit=document.getElementById('btnCommit');if(!commit)return {name:name,state:'fail',detail:'找不到 btnCommit'};
-          commit.click();await wait(380);await waitAjax(8000);
-          return {name:name,state:'ok'};
-        }
-        try{
-          var tab=document.querySelector('a[href$="#tabs2"]');if(tab){tab.click();await wait(350);await waitAjax(5000)}
-          await ensureMenu();
-          var result=[];
-          for(var i=0;i<PROJECTS.length;i++){
-            try{result.push(await applyProject(PROJECTS[i]))}catch(e){result.push({name:PROJECTS[i],state:'fail',detail:e.message||String(e)})}
-          }
-          var missing=result.filter(function(x){return x.state==='missing'}),fail=result.filter(function(x){return x.state==='fail'});
-          if(!missing.length&&!fail.length)return;
-          var text='專案加入有異常';
-          if(missing.length)text+='\n\n找不到：\n- '+missing.map(function(x){return x.name}).join('\n- ');
-          if(fail.length)text+='\n\n執行失敗：\n- '+fail.map(function(x){return x.name+'（'+x.detail+'）'}).join('\n- ');
-          alert(text);
-        }catch(e){alert('多專案執行失敗：'+(e.message||e))}
-      })();
-    };
-    return 'javascript:('+runner.toString()+')('+JSON.stringify(projects)+');void 0;';
-  }
-
-  $('addBtn').onclick=function(){var v=$('newProject').value;var n=addNames([v]);if(n){$('newProject').value='';$('status').textContent='已加入 1 個專案'}else $('status').textContent='未加入：名稱空白或已存在'};
-  $('newProject').addEventListener('keydown',function(e){if(e.key==='Enter')$('addBtn').click()});
-  $('bulkAddBtn').onclick=function(){var arr=$('bulkInput').value.split(/\r?\n/);var n=addNames(arr);$('bulkInput').value='';$('status').textContent='已批次加入 '+n+' 個專案'};
-  $('clearBtn').onclick=function(){if(!projects.length)return;if(confirm('確定清空全部專案？')){projects=[];save();$('scriptOutput').value='';$('status').textContent='已清空'}};
-  $('generateBtn').onclick=function(){var code=buildBookmarklet();if(code){$('scriptOutput').value=code;$('status').textContent='已產生 '+projects.length+' 項專案的書籤腳本'}};
-  $('copyBtn').onclick=async function(){var text=$('scriptOutput').value;if(!text){text=buildBookmarklet();$('scriptOutput').value=text}if(!text)return;try{await navigator.clipboard.writeText(text);$('status').textContent='已複製書籤腳本'}catch(e){$('scriptOutput').select();document.execCommand('copy');$('status').textContent='已複製書籤腳本'}};
-  load();
+'use strict';
+var STORAGE_KEY='pmds_multi_projects_v1',projects=[],$=function(id){return document.getElementById(id)};
+function norm(v){return String(v||'').trim().replace(/\s+/g,' ')}
+function load(){try{projects=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');if(!Array.isArray(projects))projects=[]}catch(e){projects=[]}projects=projects.map(norm).filter(Boolean).filter(function(v,i,a){return a.indexOf(v)===i});render()}
+function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(projects));render()}
+function addNames(arr){var n=0;arr.forEach(function(v){v=norm(v);if(v&&projects.indexOf(v)<0){projects.push(v);n++}});save();return n}
+function render(){var box=$('projectList');$('countText').textContent='共 '+projects.length+' 項';box.innerHTML='';if(!projects.length){box.innerHTML='<div class="empty">目前沒有專案</div>';return}projects.forEach(function(name,i){var item=document.createElement('div');item.className='project-item';var num=document.createElement('div');num.className='num';num.textContent=i+1;var nm=document.createElement('div');nm.className='name';nm.textContent=name;var acts=document.createElement('div');acts.className='actions';var edit=document.createElement('button');edit.className='secondary small';edit.textContent='編輯';edit.onclick=function(){var v=prompt('修改專案名稱：',projects[i]);if(v===null)return;v=norm(v);if(!v)return;if(projects.indexOf(v)>=0&&projects[i]!==v)return alert('此專案已存在');projects[i]=v;save()};var del=document.createElement('button');del.className='danger small';del.textContent='刪除';del.onclick=function(){projects.splice(i,1);save()};acts.append(edit,del);item.append(num,nm,acts);box.appendChild(item)})}
+function buildBookmarklet(){
+ if(!projects.length){alert('請先加入至少一個專案');return ''}
+ var runner=function(PROJECTS){(async function(){
+  var wait=function(ms){return new Promise(function(r){setTimeout(r,ms)})};
+  function visible(el){return !!(el&&(el.offsetWidth||el.offsetHeight||el.getClientRects().length))}
+  function trigger(el,t){try{el.dispatchEvent(new Event(t,{bubbles:true}))}catch(e){}}
+  function getMenu(){return document.getElementById('ctl00_ContentPlaceHolder1_projectSearch_lstbMenu')||document.getElementById('ctl00_ContentPlaceHolder1_lstbMenu')}
+  function getSearch(){var a=document.getElementById('btnSearch'),b=document.getElementById('btnPjDoSearch');return visible(a)?a:(visible(b)?b:(a||b))}
+  async function waitAjax(max){max=max||8000;var s=Date.now();while(Date.now()-s<max){var busy=false;try{busy=window.Sys&&Sys.WebForms&&Sys.WebForms.PageRequestManager&&Sys.WebForms.PageRequestManager.getInstance().get_isInAsyncPostBack()}catch(e){}if(!busy)return true;await wait(120)}return false}
+  async function waitMenu(max){max=max||6000;var s=Date.now();while(Date.now()-s<max){var m=getMenu();if(m&&m.options&&m.options.length)return m;await wait(150)}return null}
+  function findOpt(list,name){var opts=Array.from(list.options||[]);return opts.find(function(o){return o.text.trim()===name})||opts.find(function(o){return o.text.trim().includes(name)})||null}
+  try{
+   var tab=document.querySelector('a[href$="#tabs2"]');if(tab){tab.click();await wait(300);await waitAjax(5000)}
+   var search=getSearch();if(search){search.click();await wait(250);await waitAjax(8000)}
+   var list=await waitMenu(6000);if(!list){alert('專案加入失敗：找不到專案清單');return}
+   var missing=[],matched=[];
+   Array.from(list.options).forEach(function(o){o.selected=false});
+   PROJECTS.forEach(function(name){var opt=findOpt(list,name);if(opt){opt.selected=true;matched.push({name:name,opt:opt})}else missing.push(name)});
+   if(!matched.length){alert('找不到任何專案：\n- '+missing.join('\n- '));return}
+   list.multiple=true;
+   trigger(list,'input');trigger(list,'change');await wait(150);
+   var setBtn=document.getElementById('btnSet');if(!setBtn){alert('專案加入失敗：找不到 btnSet');return}
+   setBtn.click();await wait(400);await waitAjax(8000);
+   var commit=document.getElementById('btnCommit');if(!commit){alert('專案加入失敗：找不到 btnCommit');return}
+   commit.click();await wait(500);await waitAjax(8000);
+   if(missing.length)alert('以下專案找不到：\n- '+missing.join('\n- '));
+  }catch(e){alert('專案加入失敗：'+(e.message||e))}
+ })()};
+ return 'javascript:('+runner.toString()+')('+JSON.stringify(projects)+');void 0;';
+}
+$('addBtn').onclick=function(){var n=addNames([$('newProject').value]);if(n){$('newProject').value='';$('status').textContent='已加入 1 個專案'}else $('status').textContent='未加入：空白或已存在'};
+$('newProject').addEventListener('keydown',function(e){if(e.key==='Enter')$('addBtn').click()});
+$('bulkAddBtn').onclick=function(){var n=addNames($('bulkInput').value.split(/\r?\n/));$('bulkInput').value='';$('status').textContent='已批次加入 '+n+' 個專案'};
+$('clearBtn').onclick=function(){if(projects.length&&confirm('確定清空全部專案？')){projects=[];save();$('scriptOutput').value='';$('status').textContent='已清空'}};
+$('generateBtn').onclick=function(){var c=buildBookmarklet();if(c){$('scriptOutput').value=c;$('status').textContent='已產生 '+projects.length+' 項專案的批次書籤'}};
+$('copyBtn').onclick=async function(){var t=$('scriptOutput').value;if(!t){t=buildBookmarklet();$('scriptOutput').value=t}if(!t)return;try{await navigator.clipboard.writeText(t)}catch(e){$('scriptOutput').select();document.execCommand('copy')}$('status').textContent='已複製書籤腳本'};
+load();
 })();
 </script>
 </body>
