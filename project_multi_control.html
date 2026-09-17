@@ -27,7 +27,7 @@ button{border:0;border-radius:7px;padding:9px 14px;font:inherit;font-weight:700;
 <body>
 <div class="wrap">
 <h1>🍃 PMDS 多專案控制版</h1>
-<div class="notice">用途：把多個專案依序加入目前的 PMDS 稽查資料。先在這裡建立專案清單，再產生書籤腳本。執行時會依序「搜尋專案 → 選取 → 新增 → 儲存」。</div>
+<div class="notice">用途：一次建立多個專案，書籤執行後會在 PMDS 內連續加入。專案清單只在必要時開啟；全部成功時不顯示訊息，只有找不到或執行失敗才會回報。</div>
 
 <div class="panel">
   <div class="title">① 專案清單</div>
@@ -39,10 +39,10 @@ button{border:0;border-radius:7px;padding:9px 14px;font:inherit;font-weight:700;
     <button class="primary" id="addBtn">＋ 加入</button>
   </div>
   <div style="margin-top:14px">
-    <span class="label">或一次貼上多個專案（每行一個）</span>
+    <span class="label">一次貼上多個專案（每行一個）</span>
     <textarea id="bulkInput" placeholder="例如：\n115年○○專案\n115年△△專案\n115年□□專案"></textarea>
     <div class="toolbar">
-      <button class="secondary" id="bulkAddBtn">批次加入</button>
+      <button class="primary" id="bulkAddBtn">批次加入全部</button>
       <button class="danger" id="clearBtn">清空全部</button>
     </div>
   </div>
@@ -61,7 +61,7 @@ button{border:0;border-radius:7px;padding:9px 14px;font:inherit;font-weight:700;
     <button class="secondary" id="copyBtn">複製腳本</button>
   </div>
   <textarea id="scriptOutput" class="scriptbox" readonly placeholder="加入至少一個專案後，按「產生書籤腳本」"></textarea>
-  <div class="hint">把產出的整段 <b>javascript:...</b> 貼到瀏覽器書籤網址欄。使用時先打開對應 PMDS 稽查資料頁，再點此書籤。腳本會逐項處理，並在最後顯示成功、找不到與失敗項目。</div>
+  <div class="hint">把整段 <b>javascript:...</b> 放到瀏覽器書籤網址欄。使用時先打開對應 PMDS 稽查資料頁，再點書籤。腳本會盡量沿用同一個專案清單連續加入；全部成功時完全不跳視窗，只有失敗項目才會最後顯示。</div>
   <div class="status" id="status"></div>
 </div>
 </div>
@@ -129,9 +129,16 @@ button{border:0;border-radius:7px;padding:9px 14px;font:inherit;font-weight:700;
           return false;
         }
         async function waitMenu(maxMs){
-          maxMs=maxMs||8000;var start=Date.now();
-          while(Date.now()-start<maxMs){var m=getMenu();if(m&&m.options&&m.options.length)return m;await wait(200)}
+          maxMs=maxMs||5000;var start=Date.now();
+          while(Date.now()-start<maxMs){var m=getMenu();if(m&&m.options&&m.options.length)return m;await wait(180)}
           return null;
+        }
+        async function ensureMenu(){
+          var list=getMenu();
+          if(list&&list.options&&list.options.length)return list;
+          var search=getSearchButton();
+          if(search){search.click();await wait(250);await waitAjax(8000)}
+          return await waitMenu(6000);
         }
         function findOption(list,name){
           var opts=Array.from(list.options||[]);
@@ -139,27 +146,33 @@ button{border:0;border-radius:7px;padding:9px 14px;font:inherit;font-weight:700;
           return exact||opts.find(function(o){return o.text.trim().includes(name)})||null;
         }
         async function applyProject(name){
-          var search=getSearchButton();
-          if(search){search.click();await wait(250);await waitAjax(8000)}
-          var list=await waitMenu(8000);if(!list)return {name:name,state:'fail',detail:'找不到專案清單'};
-          var opt=findOption(list,name);if(!opt)return {name:name,state:'missing',detail:'清單中找不到'};
-          opt.selected=true;trigger(list,'input');trigger(list,'change');await wait(120);
+          var list=await ensureMenu();
+          if(!list)return {name:name,state:'fail',detail:'找不到專案清單'};
+          var opt=findOption(list,name);
+          if(!opt){
+            var search=getSearchButton();
+            if(search){search.click();await wait(250);await waitAjax(8000);list=await waitMenu(5000);if(list)opt=findOption(list,name)}
+          }
+          if(!opt)return {name:name,state:'missing',detail:'清單中找不到'};
+          opt.selected=true;trigger(list,'input');trigger(list,'change');await wait(100);
           var setBtn=document.getElementById('btnSet');if(!setBtn)return {name:name,state:'fail',detail:'找不到 btnSet'};
-          setBtn.click();await wait(350);await waitAjax(8000);
+          setBtn.click();await wait(300);await waitAjax(8000);
           var commit=document.getElementById('btnCommit');if(!commit)return {name:name,state:'fail',detail:'找不到 btnCommit'};
-          commit.click();await wait(450);await waitAjax(8000);
-          return {name:name,state:'ok',detail:'完成'};
+          commit.click();await wait(380);await waitAjax(8000);
+          return {name:name,state:'ok'};
         }
         try{
-          var tab=document.querySelector('a[href$="#tabs2"]');if(tab){tab.click();await wait(400);await waitAjax(5000)}
+          var tab=document.querySelector('a[href$="#tabs2"]');if(tab){tab.click();await wait(350);await waitAjax(5000)}
+          await ensureMenu();
           var result=[];
           for(var i=0;i<PROJECTS.length;i++){
             try{result.push(await applyProject(PROJECTS[i]))}catch(e){result.push({name:PROJECTS[i],state:'fail',detail:e.message||String(e)})}
           }
-          var ok=result.filter(function(x){return x.state==='ok'}),missing=result.filter(function(x){return x.state==='missing'}),fail=result.filter(function(x){return x.state==='fail'});
-          var text='多專案處理完成\n\n成功：'+ok.length+' / '+result.length;
+          var missing=result.filter(function(x){return x.state==='missing'}),fail=result.filter(function(x){return x.state==='fail'});
+          if(!missing.length&&!fail.length)return;
+          var text='專案加入有異常';
           if(missing.length)text+='\n\n找不到：\n- '+missing.map(function(x){return x.name}).join('\n- ');
-          if(fail.length)text+='\n\n失敗：\n- '+fail.map(function(x){return x.name+'（'+x.detail+'）'}).join('\n- ');
+          if(fail.length)text+='\n\n執行失敗：\n- '+fail.map(function(x){return x.name+'（'+x.detail+'）'}).join('\n- ');
           alert(text);
         }catch(e){alert('多專案執行失敗：'+(e.message||e))}
       })();
